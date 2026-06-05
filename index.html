@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistem Pemantauan Prestasi – Unit Kejuruteraan Elektrik</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --primary: #1a56db;
+    --primary-light: #e8f0fe;
+    --success: #0e9f6e;
+    --success-light: #def7ec;
+    --warning: #c27803;
+    --warning-light: #fef3c7;
+    --danger: #e02424;
+    --danger-light: #fde8e8;
+    --sidebar-w: 210px;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --bg-tertiary: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --border: rgba(0,0,0,0.1);
+    --border-md: rgba(0,0,0,0.18);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+  [data-theme="dark"] {
+    --primary: #3b82f6;
+    --primary-light: #1e3a5f;
+    --success: #10b981;
+    --success-light: #064e3b;
+    --warning: #f59e0b;
+    --warning-light: #451a03;
+    --danger: #ef4444;
+    --danger-light: #450a0a;
+    --bg-primary: #1f2937;
+    --bg-secondary: #111827;
+    --bg-tertiary: #0f172a;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --border: rgba(255,255,255,0.1);
+    --border-md: rgba(255,255,255,0.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg-tertiary); color: var(--text-primary); transition: background 0.2s, color 0.2s; }
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+  /* TOPBAR */
+  .topbar {
+    background: var(--bg-primary);
+    border-bottom: 0.5px solid var(--border);
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-logo { width: 32px; height: 32px; background: var(--primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; flex-shrink: 0; }
+  .topbar-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .topbar-filters { display: flex; align-items: center; gap: 8px; }
+  .topbar-filters label { font-size: 12px; color: var(--text-secondary); }
+  select {
+    font-size: 12px; padding: 5px 10px;
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-md);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    outline: none;
+  }
+  select:focus { border-color: var(--primary); }
+  /* LAYOUT */
+  .layout { display: flex; flex: 1; }
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--bg-primary);
+    border-right: 0.5px solid var(--border);
+    padding: 16px 0;
+    flex-shrink: 0;
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+  .sidebar-section { padding: 0 12px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin-top: 8px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 16px; font-size: 13px;
+    color: var(--text-secondary); cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s; border-radius: 0 6px 6px 0; margin: 1px 8px 1px 0;
+  }
+  .nav-item:hover { background: var(--bg-secondary); color: var(--text-primary); }
+  .nav-item.active { background: var(--primary-light); color: var(--primary); border-left-color: var(--primary); font-weight: 600; }
+  .nav-item i { font-size: 17px; }
+  /* CONTENT */
+  .content { flex: 1; padding: 20px; overflow-y: auto; max-width: 100%; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .page-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  /* METRICS */
+  .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+  .metrics-grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .metrics-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .metric-card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    padding: 16px 18px;
+    position: relative; overflow: hidden;
+  }
+  .metric-accent { position: absolute; top: 0; left: 0; width: 4px; height: 100%; border-radius: 12px 0 0 12px; }
+  .metric-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .metric-value { font-size: 26px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+  .metric-sub { font-size: 11px; color: var(--text-secondary); margin-top: 5px; }
+  .metric-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 3px 8px; border-radius: 20px; margin-top: 6px; font-weight: 500; }
+  .badge-success { background: var(--success-light); color: #065f46; }
+  .badge-danger { background: var(--danger-light); color: #9b1c1c; }
+  .badge-warning { background: var(--warning-light); color: #92400e; }
+  .badge-info { background: var(--primary-light); color: var(--primary); }
+  [data-theme="dark"] .badge-success { color: #6ee7b7; }
+  [data-theme="dark"] .badge-danger { color: #fca5a5; }
+  [data-theme="dark"] .badge-warning { color: #fcd34d; }
+  /* CHARTS */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .charts-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .chart-card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    padding: 16px;
+  }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  .chart-title i { font-size: 15px; color: var(--primary); }
+  .chart-wrap { position: relative; width: 100%; }
+  /* FILTERS BAR */
+  .filters-bar {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .filters-bar label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  /* TABLE */
+  .table-wrap {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    overflow: hidden;
+    margin-top: 14px;
+  }
+  .table-header {
+    padding: 14px 18px;
+    border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .table-header span { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .table-subfilter {
+    padding: 10px 18px;
+    border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--bg-secondary);
+  }
+  .table-subfilter label { font-size: 12px; color: var(--text-secondary); }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th {
+    padding: 9px 14px; text-align: left;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    border-bottom: 0.5px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 10px 14px; border-bottom: 0.5px solid var(--border); color: var(--text-primary); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg-secondary); }
+  /* BUTTONS */
+  .btn { font-size: 12px; padding: 6px 14px; border-radius: var(--radius-md); cursor: pointer; border: 0.5px solid var(--border-md); background: var(--bg-secondary); color: var(--text-primary); font-weight: 500; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+  .btn:hover { background: var(--bg-tertiary); }
+  .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-sm { font-size: 11px; padding: 4px 9px; border-radius: 6px; cursor: pointer; border: 0.5px solid var(--border-md); background: var(--bg-secondary); color: var(--text-primary); display: inline-flex; align-items: center; gap: 4px; transition: all 0.15s; }
+  .btn-sm:hover { background: var(--bg-tertiary); }
+  .btn-del { color: var(--danger); border-color: #fca5a5; background: var(--danger-light); }
+  .btn-del:hover { opacity: 0.8; }
+  /* PCT BAR */
+  .pct-bar { height: 5px; border-radius: 3px; background: var(--bg-tertiary); overflow: hidden; }
+  .pct-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+  .pct-cell { display: flex; align-items: center; gap: 8px; }
+  /* SETTINGS */
+  .settings-wrap { max-width: 580px; }
+  .settings-section { background: var(--bg-primary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 20px; margin-bottom: 14px; }
+  .settings-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .settings-row:last-child { margin-bottom: 0; }
+  .settings-row label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+  .settings-row input[type=text] { font-size: 13px; padding: 7px 12px; border-radius: var(--radius-md); border: 0.5px solid var(--border-md); background: var(--bg-secondary); color: var(--text-primary); width: 280px; outline: none; }
+  .settings-row input[type=text]:focus { border-color: var(--primary); }
+  .toggle-group { display: flex; gap: 6px; }
+  .toggle-btn { font-size: 12px; padding: 6px 16px; border-radius: var(--radius-md); cursor: pointer; border: 0.5px solid var(--border-md); background: var(--bg-secondary); color: var(--text-secondary); font-weight: 500; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .toggle-btn.active { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: 24px; width: 360px;
+    border: 0.5px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+  .modal-row { margin-bottom: 12px; }
+  .modal-row label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500; }
+  .modal-row input, .modal-row select { width: 100%; font-size: 13px; padding: 7px 10px; border-radius: var(--radius-md); border: 0.5px solid var(--border-md); background: var(--bg-secondary); color: var(--text-primary); outline: none; }
+  .modal-row input:focus, .modal-row select:focus { border-color: var(--primary); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 300;
+    background: var(--text-primary); color: var(--bg-primary);
+    padding: 10px 18px; border-radius: var(--radius-md);
+    font-size: 13px; font-weight: 500;
+    opacity: 0; transform: translateY(10px);
+    transition: all 0.25s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 4px; }
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .metrics-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .sidebar { display: none; }
+    .topbar-title { font-size: 12px; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo"><i class="ti ti-bolt" aria-hidden="true"></i></div>
+      <span class="topbar-title" id="sys-title">Sistem Pemantauan Prestasi – Unit Kejuruteraan Elektrik</span>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-filters">
+        <label>Bulan:</label>
+        <select id="glob-month" onchange="updateAll()">
+          <option value="0">Semua Bulan</option>
+          <option value="1">Januari</option><option value="2">Februari</option><option value="3">Mac</option>
+          <option value="4">April</option><option value="5">Mei</option><option value="6">Jun</option>
+          <option value="7">Julai</option><option value="8">Ogos</option><option value="9">September</option>
+          <option value="10">Oktober</option><option value="11">November</option><option value="12">Disember</option>
+        </select>
+        <label>Tahun:</label>
+        <select id="glob-year" onchange="updateAll()">
+          <option value="0">Semua Tahun</option>
+          <option value="2022">2022</option><option value="2023">2023</option>
+          <option value="2024" selected>2024</option><option value="2025">2025</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">Menu</div>
+      <div class="nav-item active" onclick="showTab('dashboard',this)">
+        <i class="ti ti-layout-dashboard" aria-hidden="true"></i><span>Dashboard</span>
+      </div>
+      <div class="nav-item" onclick="showTab('dv3',this)" id="nav-dv3">
+        <i class="ti ti-file-check" aria-hidden="true"></i><span id="tab-dv3-name">DV3</span>
+      </div>
+      <div class="nav-item" onclick="showTab('ppm',this)" id="nav-ppm">
+        <i class="ti ti-tool" aria-hidden="true"></i><span id="tab-ppm-name">PPM</span>
+      </div>
+      <div class="nav-item" onclick="showTab('kontraktor',this)" id="nav-kontraktor">
+        <i class="ti ti-building-community" aria-hidden="true"></i><span id="tab-kontraktor-name">Kontraktor</span>
+      </div>
+      <div class="sidebar-section" style="margin-top:16px;">Sistem</div>
+      <div class="nav-item" onclick="showTab('tetapan',this)">
+        <i class="ti ti-settings" aria-hidden="true"></i><span>Tetapan</span>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="content">
+
+      <!-- ===== TAB DASHBOARD ===== -->
+      <div class="tab-panel active" id="tab-dashboard">
+        <div class="page-title"><i class="ti ti-layout-dashboard"></i>Dashboard Utama</div>
+        <div class="metrics-grid" id="dash-metrics"></div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title"><i class="ti ti-chart-bar"></i>Carta 1 – Prestasi DV3 (Doket / Tahun)</div>
+            <div class="chart-wrap" style="height:210px">
+              <canvas id="c-dv3-bar" role="img" aria-label="Carta bar prestasi DV3 mengikut tahun">Data DV3 mengikut tahun.</canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><i class="ti ti-chart-bar"></i>Carta 2 – Prestasi PPM (PPM / Bulan)</div>
+            <div class="chart-wrap" style="height:210px">
+              <canvas id="c-ppm-bar" role="img" aria-label="Carta bar PPM mengikut bulan">Data PPM mengikut bulan.</canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><i class="ti ti-chart-line"></i>Carta 3 – Nilai RM Kontraktor (Mengikut Tahun)</div>
+            <div class="chart-wrap" style="height:210px">
+              <canvas id="c-rm-line" role="img" aria-label="Carta line nilai RM kontraktor">Nilai RM mengikut tahun.</canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><i class="ti ti-medal"></i>Carta 4 – Ranking Penyenggara (% Siap DV3)</div>
+            <div class="chart-wrap" style="height:210px">
+              <canvas id="c-rank-maint" role="img" aria-label="Ranking penyenggara % siap DV3">Ranking penyenggara.</canvas>
+            </div>
+          </div>
+          <div class="chart-card full">
+            <div class="chart-title"><i class="ti ti-trophy"></i>Carta 5 – Ranking Kontraktor (Jumlah RM)</div>
+            <div class="chart-wrap" style="height:200px">
+              <canvas id="c-rank-kontraktor" role="img" aria-label="Ranking kontraktor berdasarkan jumlah RM">Ranking kontraktor.</canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TAB DV3 ===== -->
+      <div class="tab-panel" id="tab-dv3">
+        <div class="page-title"><i class="ti ti-file-check"></i><span id="dv3-page-title">Prestasi DV3</span></div>
+        <div class="filters-bar">
+          <label>Tahun:</label>
+          <select id="dv3-f-year" onchange="renderDV3()">
+            <option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024" selected>2024</option><option value="2025">2025</option>
+          </select>
+          <label>Bulan:</label>
+          <select id="dv3-f-month" onchange="renderDV3()">
+            <option value="0">Semua</option><option value="1">Jan</option><option value="2">Feb</option><option value="3">Mac</option><option value="4">Apr</option><option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Ogos</option><option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Dis</option>
+          </select>
+          <label>Penyenggara:</label>
+          <select id="dv3-f-maint" onchange="renderDV3()"><option value="">Semua</option></select>
+        </div>
+        <div class="metrics-grid metrics-grid-4" id="dv3-metrics"></div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title"><i class="ti ti-chart-bar"></i>Prestasi Penyenggara (Siap vs Tak Siap)</div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="c-dv3-staff" role="img" aria-label="Prestasi penyenggara DV3">Prestasi penyenggara.</canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><i class="ti ti-chart-line"></i>Trend Tahunan DV3</div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="c-dv3-trend" role="img" aria-label="Trend tahunan DV3">Trend DV3.</canvas>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <span><i class="ti ti-table" style="vertical-align:-2px;margin-right:6px"></i>Rekod DV3</span>
+            <button class="btn btn-primary" onclick="openAddModal('dv3')"><i class="ti ti-plus"></i> Tambah Rekod</button>
+          </div>
+          <div class="table-subfilter">
+            <label>Cari Penyenggara:</label><select id="dv3-t-maint" onchange="renderDV3()"><option value="">Semua</option></select>
+            <label>Tahun:</label><select id="dv3-t-year" onchange="renderDV3()"><option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024" selected>2024</option><option value="2025">2025</option></select>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>#</th><th>Tahun</th><th>Penyenggara</th><th>Tak Siap</th><th>Siap</th><th>Jumlah Doket</th><th>% Siap</th><th>Tindakan</th></tr></thead>
+              <tbody id="dv3-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TAB PPM ===== -->
+      <div class="tab-panel" id="tab-ppm">
+        <div class="page-title"><i class="ti ti-tool"></i><span id="ppm-page-title">Prestasi PPM</span></div>
+        <div class="filters-bar">
+          <label>Tahun:</label>
+          <select id="ppm-f-year" onchange="renderPPM()">
+            <option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024" selected>2024</option><option value="2025">2025</option>
+          </select>
+          <label>Bulan:</label>
+          <select id="ppm-f-month" onchange="renderPPM()">
+            <option value="0">Semua</option><option value="1">Jan</option><option value="2">Feb</option><option value="3">Mac</option><option value="4">Apr</option><option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Ogos</option><option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Dis</option>
+          </select>
+          <label>Penyenggara:</label>
+          <select id="ppm-f-maint" onchange="renderPPM()"><option value="">Semua</option></select>
+        </div>
+        <div class="metrics-grid metrics-grid-4" id="ppm-metrics"></div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title"><i class="ti ti-chart-bar"></i>Prestasi Penyenggara PPM (Siap vs Tak Siap)</div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="c-ppm-staff" role="img" aria-label="Prestasi penyenggara PPM">Prestasi penyenggara PPM.</canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><i class="ti ti-chart-line"></i>Trend Bulanan PPM</div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="c-ppm-trend" role="img" aria-label="Trend bulanan PPM">Trend bulanan PPM.</canvas>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <span><i class="ti ti-table" style="vertical-align:-2px;margin-right:6px"></i>Rekod PPM</span>
+            <button class="btn btn-primary" onclick="openAddModal('ppm')"><i class="ti ti-plus"></i> Tambah Rekod</button>
+          </div>
+          <div class="table-subfilter">
+            <label>Cari Penyenggara:</label><select id="ppm-t-maint" onchange="renderPPM()"><option value="">Semua</option></select>
+            <label>Tahun:</label><select id="ppm-t-year" onchange="renderPPM()"><option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024" selected>2024</option><option value="2025">2025</option></select>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Penyenggara</th><th>Tak Siap</th><th>Siap</th><th>Jumlah PPM</th><th>% Siap</th><th>Tindakan</th></tr></thead>
+              <tbody id="ppm-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TAB KONTRAKTOR ===== -->
+      <div class="tab-panel" id="tab-kontraktor">
+        <div class="page-title"><i class="ti ti-building-community"></i><span id="kt-page-title">Prestasi Kontraktor</span></div>
+        <div class="filters-bar">
+          <label>Tahun:</label>
+          <select id="kt-f-year" onchange="renderKontraktor()">
+            <option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024" selected>2024</option><option value="2025">2025</option>
+          </select>
+          <label>Bulan:</label>
+          <select id="kt-f-month" onchange="renderKontraktor()">
+            <option value="0">Semua</option><option value="1">Jan</option><option value="2">Feb</option><option value="3">Mac</option><option value="4">Apr</option><option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Ogos</option><option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Dis</option>
+          </select>
+          <label>Kontraktor:</label>
+          <select id="kt-f-kt" onchange="renderKontraktor()"><option value="">Semua</option></select>
+          <label>Zon:</label>
+          <select id="kt-f-zon" onchange="renderKontraktor()"><option value="">Semua Zon</option><option>Zon A</option><option>Zon B</option><option>Zon C</option></select>
+        </div>
+        <div class="metrics-grid" id="kt-metrics"></div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title"><i class="ti ti-chart-bar"></i>Doket Kontraktor (Jumlah Doket)</div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="c-kt-doket" role="img" aria-label="Doket kontraktor">Doket kontraktor.</canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><i class="ti ti-cash"></i>Nilai RM Kontraktor</div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="c-kt-rm" role="img" aria-label="Nilai RM kontraktor">Nilai RM kontraktor.</canvas>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <span><i class="ti ti-table" style="vertical-align:-2px;margin-right:6px"></i>Rekod Kontraktor</span>
+            <button class="btn btn-primary" onclick="openAddModal('kontraktor')"><i class="ti ti-plus"></i> Tambah Rekod</button>
+          </div>
+          <div class="table-subfilter">
+            <label>Kontraktor:</label><select id="kt-t-kt" onchange="renderKontraktor()"><option value="">Semua</option></select>
+            <label>Tahun:</label><select id="kt-t-year" onchange="renderKontraktor()"><option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024" selected>2024</option><option value="2025">2025</option></select>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Kontraktor</th><th>Zon</th><th>Jml Doket</th><th>Jumlah RM</th><th>Tindakan</th></tr></thead>
+              <tbody id="kt-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TAB TETAPAN ===== -->
+      <div class="tab-panel" id="tab-tetapan">
+        <div class="page-title"><i class="ti ti-settings"></i>Tetapan Sistem</div>
+        <div class="settings-wrap">
+          <div class="settings-section">
+            <div class="settings-title"><i class="ti ti-pencil"></i>Nama Sistem & Tab</div>
+            <div class="settings-row">
+              <label>Nama Sistem</label>
+              <input type="text" id="s-sysname" value="Sistem Pemantauan Prestasi – Unit Kejuruteraan Elektrik">
+            </div>
+            <div class="settings-row">
+              <label>Nama Tab DV3</label>
+              <input type="text" id="s-dv3name" value="DV3">
+            </div>
+            <div class="settings-row">
+              <label>Nama Tab PPM</label>
+              <input type="text" id="s-ppmname" value="PPM">
+            </div>
+            <div class="settings-row">
+              <label>Nama Tab Kontraktor</label>
+              <input type="text" id="s-ktname" value="Kontraktor">
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()"><i class="ti ti-device-floppy"></i> Simpan Perubahan</button>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title"><i class="ti ti-sun"></i>Mode Paparan</div>
+            <div class="settings-row">
+              <label>Tema Warna</label>
+              <div class="toggle-group">
+                <button class="toggle-btn active" id="mode-light" onclick="setMode('light')"><i class="ti ti-sun"></i> Cerah</button>
+                <button class="toggle-btn" id="mode-dark" onclick="setMode('dark')"><i class="ti ti-moon"></i> Gelap</button>
+              </div>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title"><i class="ti ti-info-circle"></i>Maklumat Sistem</div>
+            <div class="settings-row"><label>Versi</label><span style="font-size:13px;color:var(--text-secondary)">v1.0.0</span></div>
+            <div class="settings-row"><label>Dibangunkan oleh</label><span style="font-size:13px;color:var(--text-secondary)">Unit Kejuruteraan Elektrik</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end .content -->
+  </div><!-- end .layout -->
+</div><!-- end .app -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title"><i class="ti ti-edit"></i> Edit Data</div>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()"><i class="ti ti-x"></i> Batal</button>
+      <button class="btn btn-primary" onclick="saveModal()"><i class="ti ti-device-floppy"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const MONTHS = ['Jan','Feb','Mac','Apr','Mei','Jun','Jul','Ogos','Sep','Okt','Nov','Dis'];
+const MONTHS_FULL = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
+const MAINTAINERS = ['Ahmad Fauzi','Razif Hamdan','Norzila Bt Hamid','Kamarul Ariff','Suhaimi Zakaria'];
+const CONTRACTORS = ['Syarikat Elektrik Maju','Teknologi Jaya Sdn Bhd','Reka Cipta E&M','Dinamik Power Works'];
+const ZONES = ['Zon A','Zon B','Zon C'];
+const YEARS = [2022,2023,2024,2025];
+const PALETTE = ['#1a56db','#0e9f6e','#c27803','#e02424','#7e3af2','#0694a2'];
+
+function rnd(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+
+let dv3Data=[], ppmData=[], ktData=[];
+
+function seed(){
+  dv3Data=[];
+  YEARS.forEach(y=>MONTHS.forEach((_,mi)=>MAINTAINERS.forEach(maint=>{
+    dv3Data.push({id:uid(),year:y,month:mi+1,maint,siap:rnd(10,30),tak:rnd(1,8)});
+  })));
+  ppmData=[];
+  YEARS.forEach(y=>MONTHS.forEach((_,mi)=>MAINTAINERS.forEach(maint=>{
+    ppmData.push({id:uid(),year:y,month:mi+1,maint,siap:rnd(5,18),tak:rnd(0,5)});
+  })));
+  ktData=[];
+  YEARS.forEach(y=>MONTHS.forEach((_,mi)=>CONTRACTORS.forEach((kt,ki)=>{
+    ktData.push({id:uid(),year:y,month:mi+1,kt,zon:ZONES[ki%3],doket:rnd(5,20),rm:rnd(8000,50000)});
+  })));
+}
+seed();
+
+function populateSelects(){
+  ['dv3-f-maint','dv3-t-maint','ppm-f-maint','ppm-t-maint'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.innerHTML='<option value="">Semua</option>';
+    MAINTAINERS.forEach(m=>el.innerHTML+=`<option>${m}</option>`);
+  });
+  ['kt-f-kt','kt-t-kt'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.innerHTML='<option value="">Semua</option>';
+    CONTRACTORS.forEach(c=>el.innerHTML+=`<option>${c}</option>`);
+  });
+}
+populateSelects();
+
+const charts={};
+function mkChart(id,type,labels,datasets,opts={}){
+  if(charts[id]){ charts[id].destroy(); delete charts[id]; }
+  const el=document.getElementById(id); if(!el) return;
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const gridColor=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
+  const tickColor=isDark?'#9ca3af':'#6b7280';
+  const defaultScales={x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:11}}},y:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:11}}}};
+  charts[id]=new Chart(el,{
+    type,
+    data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:opts.legend||false,labels:{color:tickColor,font:{size:11},usePointStyle:true,pointStyleWidth:8}}},
+      scales:opts.scales||defaultScales,
+      ...opts.extra
+    }
+  });
+}
+
+/* ---- DASHBOARD ---- */
+function renderDashboard(){
+  const gm=+document.getElementById('glob-month').value;
+  const gy=+document.getElementById('glob-year').value;
+  const dv3=dv3Data.filter(d=>(gm===0||d.month===gm)&&(gy===0||d.year===gy));
+  const ppm=ppmData.filter(d=>(gm===0||d.month===gm)&&(gy===0||d.year===gy));
+  const kt=ktData.filter(d=>(gm===0||d.month===gm)&&(gy===0||d.year===gy));
+  const d3S=dv3.reduce((a,d)=>a+d.siap,0), d3T=dv3.reduce((a,d)=>a+d.tak,0), d3Tot=d3S+d3T;
+  const ppmS=ppm.reduce((a,d)=>a+d.siap,0), ppmT=ppm.reduce((a,d)=>a+d.tak,0), ppmTot=ppmS+ppmT;
+  const ktRM=kt.reduce((a,d)=>a+d.rm,0), ktD=kt.reduce((a,d)=>a+d.doket,0);
+  const d3P=d3Tot?Math.round(d3S/d3Tot*100):0;
+  const ppmP=ppmTot?Math.round(ppmS/ppmTot*100):0;
+  document.getElementById('dash-metrics').innerHTML=`
+    <div class="metric-card"><div class="metric-accent" style="background:#1a56db"></div><div class="metric-label">Jumlah Doket DV3</div><div class="metric-value">${d3Tot}</div><span class="metric-badge badge-info">${d3P}% siap</span></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#0e9f6e"></div><div class="metric-label">DV3 Siap</div><div class="metric-value" style="color:#0e9f6e">${d3S}</div><div class="metric-sub">Dari ${d3Tot} doket</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#e02424"></div><div class="metric-label">DV3 Tak Siap</div><div class="metric-value" style="color:#e02424">${d3T}</div><span class="metric-badge badge-danger">Perlu tindakan</span></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#7e3af2"></div><div class="metric-label">Jumlah PPM</div><div class="metric-value">${ppmTot}</div><span class="metric-badge badge-success">${ppmP}% siap</span></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#c27803"></div><div class="metric-label">Doket Kontraktor</div><div class="metric-value">${ktD}</div><div class="metric-sub">${new Set(kt.map(d=>d.kt)).size} kontraktor aktif</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#0694a2"></div><div class="metric-label">Nilai RM Kontraktor</div><div class="metric-value" style="font-size:20px">RM ${ktRM.toLocaleString()}</div><span class="metric-badge badge-warning">Tahun semasa</span></div>`;
+  const byYearDV3={};
+  dv3Data.forEach(d=>{if(!byYearDV3[d.year])byYearDV3[d.year]=0;byYearDV3[d.year]+=d.siap+d.tak;});
+  mkChart('c-dv3-bar','bar',Object.keys(byYearDV3),[{label:'Doket DV3',data:Object.values(byYearDV3),backgroundColor:'#1a56db',borderRadius:4}]);
+  const byMonthPPM=Array(12).fill(0);
+  ppmData.filter(d=>(gy===0||d.year===gy)).forEach(d=>byMonthPPM[d.month-1]+=d.siap+d.tak);
+  mkChart('c-ppm-bar','bar',MONTHS,[{label:'PPM',data:byMonthPPM,backgroundColor:'#7e3af2',borderRadius:4}],{scales:{x:{ticks:{maxRotation:45,font:{size:10}},grid:{color:getGridColor()}},y:{ticks:{font:{size:10}},grid:{color:getGridColor()}}}});
+  const byYearRM={};
+  ktData.forEach(d=>{if(!byYearRM[d.year])byYearRM[d.year]=0;byYearRM[d.year]+=d.rm;});
+  mkChart('c-rm-line','line',Object.keys(byYearRM),[{label:'Nilai RM',data:Object.values(byYearRM),borderColor:'#0e9f6e',backgroundColor:'rgba(14,159,110,0.12)',fill:true,tension:0.4,pointBackgroundColor:'#0e9f6e',pointRadius:4}],{extra:{scales:{y:{ticks:{callback:v=>'RM '+Math.round(v/1000)+'K',font:{size:10}},grid:{color:getGridColor()}},x:{ticks:{font:{size:10}},grid:{color:getGridColor()}}}}});
+  const byMP={};
+  dv3Data.forEach(d=>{if(!byMP[d.maint])byMP[d.maint]={s:0,t:0};byMP[d.maint].s+=d.siap;byMP[d.maint].t+=d.tak;});
+  const ml=Object.keys(byMP).sort((a,b)=>{const A=byMP[a],B=byMP[b];return ((B.s+B.t)?B.s/(B.s+B.t):0)-((A.s+A.t)?A.s/(A.s+A.t):0);});
+  mkChart('c-rank-maint','bar',ml,[{label:'% Siap',data:ml.map(l=>{const x=byMP[l];return (x.s+x.t)?Math.round(x.s/(x.s+x.t)*100):0;}),backgroundColor:ml.map((_,i)=>PALETTE[i%6]),borderRadius:4}],{scales:{x:{ticks:{maxRotation:25,font:{size:10}},grid:{color:getGridColor()}},y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:getGridColor()}}},extra:{plugins:{legend:{display:false}}}});
+  const byKR={};
+  ktData.forEach(d=>{if(!byKR[d.kt])byKR[d.kt]=0;byKR[d.kt]+=d.rm;});
+  const ks=Object.entries(byKR).sort((a,b)=>b[1]-a[1]);
+  mkChart('c-rank-kontraktor','bar',ks.map(x=>x[0]),[{label:'Nilai RM',data:ks.map(x=>x[1]),backgroundColor:PALETTE.slice(0,ks.length),borderRadius:4}],{extra:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'RM '+Math.round(v/1000)+'K',font:{size:10}},grid:{color:getGridColor()}},y:{ticks:{font:{size:11}},grid:{color:getGridColor()}}}}});
+}
+
+function getGridColor(){
+  return document.documentElement.getAttribute('data-theme')==='dark'?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
+}
+
+/* ---- DV3 ---- */
+function renderDV3(){
+  const y=+document.getElementById('dv3-f-year').value;
+  const m=+document.getElementById('dv3-f-month').value;
+  const maint=document.getElementById('dv3-f-maint').value;
+  const data=dv3Data.filter(d=>(y===0||d.year===y)&&(m===0||d.month===m)&&(!maint||d.maint===maint));
+  const jS=data.reduce((a,d)=>a+d.siap,0), jT=data.reduce((a,d)=>a+d.tak,0), jTot=jS+jT;
+  const pct=jTot?Math.round(jS/jTot*100):0;
+  document.getElementById('dv3-metrics').innerHTML=`
+    <div class="metric-card"><div class="metric-accent" style="background:#1a56db"></div><div class="metric-label">Jumlah Doket</div><div class="metric-value">${jTot}</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#0e9f6e"></div><div class="metric-label">Siap</div><div class="metric-value" style="color:#0e9f6e">${jS}</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#e02424"></div><div class="metric-label">Tak Siap</div><div class="metric-value" style="color:#e02424">${jT}</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#c27803"></div><div class="metric-label">% Siap</div><div class="metric-value">${pct}%</div></div>`;
+  const byM={};
+  data.forEach(d=>{if(!byM[d.maint])byM[d.maint]={s:0,t:0};byM[d.maint].s+=d.siap;byM[d.maint].t+=d.tak;});
+  const ls=Object.keys(byM);
+  mkChart('c-dv3-staff','bar',ls,[
+    {label:'Siap',data:ls.map(l=>byM[l].s),backgroundColor:'#0e9f6e',borderRadius:3},
+    {label:'Tak Siap',data:ls.map(l=>byM[l].t),backgroundColor:'#e02424',borderRadius:3}
+  ],{legend:true,scales:{x:{ticks:{maxRotation:25,font:{size:10}},grid:{color:getGridColor()}},y:{ticks:{font:{size:10}},grid:{color:getGridColor()}}}});
+  const byY={};
+  dv3Data.forEach(d=>{if(!byY[d.year])byY[d.year]=0;byY[d.year]+=d.siap+d.tak;});
+  mkChart('c-dv3-trend','line',Object.keys(byY),[{label:'Jumlah Doket',data:Object.values(byY),borderColor:'#1a56db',backgroundColor:'rgba(26,86,219,0.1)',fill:true,tension:0.4,pointBackgroundColor:'#1a56db',pointRadius:4}],{extra:{scales:{y:{ticks:{font:{size:10}},grid:{color:getGridColor()}},x:{ticks:{font:{size:10}},grid:{color:getGridColor()}}}}});
+  const ty=+document.getElementById('dv3-t-year').value||0;
+  const tm=document.getElementById('dv3-t-maint').value||'';
+  const tdata=dv3Data.filter(d=>(ty===0||d.year===ty)&&(!tm||d.maint===tm));
+  document.getElementById('dv3-tbody').innerHTML=tdata.slice(0,60).map((d,i)=>{
+    const tot=d.siap+d.tak, p=tot?Math.round(d.siap/tot*100):0;
+    const col=p>=80?'#0e9f6e':p>=50?'#c27803':'#e02424';
+    return `<tr><td style="color:var(--text-secondary)">${i+1}</td><td>${d.year}</td><td>${d.maint}</td><td style="color:#e02424;font-weight:500">${d.tak}</td><td style="color:#0e9f6e;font-weight:500">${d.siap}</td><td>${tot}</td>
+    <td><div class="pct-cell"><span style="font-weight:600;color:${col};min-width:36px">${p}%</span><div class="pct-bar" style="width:60px"><div class="pct-fill" style="width:${p}%;background:${col}"></div></div></div></td>
+    <td><button class="btn-sm" onclick="editRow('dv3','${d.id}')"><i class="ti ti-edit"></i> Edit</button> <button class="btn-sm btn-del" onclick="delRow('dv3','${d.id}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-secondary)">Tiada rekod dijumpai</td></tr>';
+}
+
+/* ---- PPM ---- */
+function renderPPM(){
+  const y=+document.getElementById('ppm-f-year').value;
+  const m=+document.getElementById('ppm-f-month').value;
+  const maint=document.getElementById('ppm-f-maint').value;
+  const data=ppmData.filter(d=>(y===0||d.year===y)&&(m===0||d.month===m)&&(!maint||d.maint===maint));
+  const jS=data.reduce((a,d)=>a+d.siap,0), jT=data.reduce((a,d)=>a+d.tak,0), jTot=jS+jT;
+  const pct=jTot?Math.round(jS/jTot*100):0;
+  document.getElementById('ppm-metrics').innerHTML=`
+    <div class="metric-card"><div class="metric-accent" style="background:#7e3af2"></div><div class="metric-label">Jumlah PPM</div><div class="metric-value">${jTot}</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#0e9f6e"></div><div class="metric-label">Siap</div><div class="metric-value" style="color:#0e9f6e">${jS}</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#e02424"></div><div class="metric-label">Tak Siap</div><div class="metric-value" style="color:#e02424">${jT}</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#c27803"></div><div class="metric-label">% Siap</div><div class="metric-value">${pct}%</div></div>`;
+  const byM={};
+  data.forEach(d=>{if(!byM[d.maint])byM[d.maint]={s:0,t:0};byM[d.maint].s+=d.siap;byM[d.maint].t+=d.tak;});
+  const ls=Object.keys(byM);
+  mkChart('c-ppm-staff','bar',ls,[
+    {label:'Siap',data:ls.map(l=>byM[l].s),backgroundColor:'#0e9f6e',borderRadius:3},
+    {label:'Tak Siap',data:ls.map(l=>byM[l].t),backgroundColor:'#e02424',borderRadius:3}
+  ],{legend:true,scales:{x:{ticks:{maxRotation:25,font:{size:10}},grid:{color:getGridColor()}},y:{ticks:{font:{size:10}},grid:{color:getGridColor()}}}});
+  const byMon=Array(12).fill(0);
+  data.forEach(d=>byMon[d.month-1]+=d.siap+d.tak);
+  mkChart('c-ppm-trend','line',MONTHS,[{label:'Jumlah PPM',data:byMon,borderColor:'#7e3af2',backgroundColor:'rgba(126,58,242,0.1)',fill:true,tension:0.4,pointBackgroundColor:'#7e3af2',pointRadius:4}],{extra:{scales:{y:{ticks:{font:{size:10}},grid:{color:getGridColor()}},x:{ticks:{font:{size:10}},grid:{color:getGridColor()}}}}});
+  const ty=+document.getElementById('ppm-t-year').value||0;
+  const tm=document.getElementById('ppm-t-maint').value||'';
+  const tdata=ppmData.filter(d=>(ty===0||d.year===ty)&&(!tm||d.maint===tm));
+  document.getElementById('ppm-tbody').innerHTML=tdata.slice(0,60).map((d,i)=>{
+    const tot=d.siap+d.tak, p=tot?Math.round(d.siap/tot*100):0;
+    const col=p>=80?'#0e9f6e':p>=50?'#c27803':'#e02424';
+    return `<tr><td style="color:var(--text-secondary)">${i+1}</td><td>${MONTHS[d.month-1]}</td><td>${d.year}</td><td>${d.maint}</td><td style="color:#e02424;font-weight:500">${d.tak}</td><td style="color:#0e9f6e;font-weight:500">${d.siap}</td><td>${tot}</td>
+    <td><div class="pct-cell"><span style="font-weight:600;color:${col};min-width:36px">${p}%</span><div class="pct-bar" style="width:60px"><div class="pct-fill" style="width:${p}%;background:${col}"></div></div></div></td>
+    <td><button class="btn-sm" onclick="editRow('ppm','${d.id}')"><i class="ti ti-edit"></i> Edit</button> <button class="btn-sm btn-del" onclick="delRow('ppm','${d.id}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('')||'<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-secondary)">Tiada rekod dijumpai</td></tr>';
+}
+
+/* ---- KONTRAKTOR ---- */
+function renderKontraktor(){
+  const y=+document.getElementById('kt-f-year').value;
+  const m=+document.getElementById('kt-f-month').value;
+  const kt=document.getElementById('kt-f-kt').value;
+  const zon=document.getElementById('kt-f-zon').value;
+  const data=ktData.filter(d=>(y===0||d.year===y)&&(m===0||d.month===m)&&(!kt||d.kt===kt)&&(!zon||d.zon===zon));
+  const jD=data.reduce((a,d)=>a+d.doket,0), jRM=data.reduce((a,d)=>a+d.rm,0), jKt=new Set(data.map(d=>d.kt)).size;
+  document.getElementById('kt-metrics').innerHTML=`
+    <div class="metric-card"><div class="metric-accent" style="background:#1a56db"></div><div class="metric-label">Jumlah Doket</div><div class="metric-value">${jD}</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#0694a2"></div><div class="metric-label">Jumlah RM</div><div class="metric-value" style="font-size:18px">RM ${jRM.toLocaleString()}</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#c27803"></div><div class="metric-label">Bilangan Kontraktor</div><div class="metric-value">${jKt}</div></div>`;
+  const byKt={};
+  data.forEach(d=>{if(!byKt[d.kt])byKt[d.kt]={doket:0,rm:0};byKt[d.kt].doket+=d.doket;byKt[d.kt].rm+=d.rm;});
+  const kl=Object.keys(byKt);
+  mkChart('c-kt-doket','bar',kl,[{label:'Jumlah Doket',data:kl.map(l=>byKt[l].doket),backgroundColor:PALETTE,borderRadius:4}],{scales:{x:{ticks:{font:{size:10}},grid:{color:getGridColor()}},y:{ticks:{font:{size:10}},grid:{color:getGridColor()}}}});
+  mkChart('c-kt-rm','bar',kl,[{label:'Nilai RM',data:kl.map(l=>byKt[l].rm),backgroundColor:['#1a56db','#0e9f6e','#c27803','#e02424'],borderRadius:4}],{extra:{scales:{x:{ticks:{font:{size:10}},grid:{color:getGridColor()}},y:{ticks:{callback:v=>'RM '+Math.round(v/1000)+'K',font:{size:10}},grid:{color:getGridColor()}}}}});
+  const ty=+document.getElementById('kt-t-year').value||0;
+  const tkt=document.getElementById('kt-t-kt').value||'';
+  const tdata=ktData.filter(d=>(ty===0||d.year===ty)&&(!tkt||d.kt===tkt));
+  document.getElementById('kt-tbody').innerHTML=tdata.slice(0,60).map((d,i)=>`<tr>
+    <td style="color:var(--text-secondary)">${i+1}</td><td>${MONTHS[d.month-1]}</td><td>${d.year}</td><td>${d.kt}</td><td>${d.zon}</td>
+    <td style="font-weight:500">${d.doket}</td><td style="font-weight:500;color:#0694a2">RM ${d.rm.toLocaleString()}</td>
+    <td><button class="btn-sm" onclick="editRow('kt','${d.id}')"><i class="ti ti-edit"></i> Edit</button> <button class="btn-sm btn-del" onclick="delRow('kt','${d.id}')"><i class="ti ti-trash"></i></button></td></tr>`).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-secondary)">Tiada rekod dijumpai</td></tr>';
+}
+
+/* ---- MODAL ---- */
+let modalCtx={};
+function editRow(type,id){
+  let rec = (type==='dv3'?dv3Data:type==='ppm'?ppmData:ktData).find(d=>d.id===id);
+  if(!rec) return;
+  modalCtx={type,id,mode:'edit'};
+  document.getElementById('modal-title').innerHTML='<i class="ti ti-edit"></i> Edit Data';
+  let html='';
+  if(type==='dv3'||type==='ppm'){
+    html+=`<div class="modal-row"><label>Siap</label><input type="number" id="m-siap" value="${rec.siap}" min="0"></div>`;
+    html+=`<div class="modal-row"><label>Tak Siap</label><input type="number" id="m-tak" value="${rec.tak}" min="0"></div>`;
+  } else {
+    html+=`<div class="modal-row"><label>Jumlah Doket</label><input type="number" id="m-doket" value="${rec.doket}" min="0"></div>`;
+    html+=`<div class="modal-row"><label>Nilai RM (RM)</label><input type="number" id="m-rm" value="${rec.rm}" min="0"></div>`;
+  }
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function openAddModal(type){
+  modalCtx={type,mode:'add'};
+  document.getElementById('modal-title').innerHTML='<i class="ti ti-plus"></i> Tambah Rekod';
+  const yOpts=YEARS.map(y=>`<option value="${y}"${y===2024?' selected':''}>${y}</option>`).join('');
+  const mOpts=MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+  let html=`<div class="modal-row"><label>Tahun</label><select id="m-year">${yOpts}</select></div>`;
+  html+=`<div class="modal-row"><label>Bulan</label><select id="m-month">${mOpts}</select></div>`;
+  if(type==='dv3'||type==='ppm'){
+    html+=`<div class="modal-row"><label>Penyenggara</label><select id="m-maint">${MAINTAINERS.map(m=>`<option>${m}</option>`).join('')}</select></div>`;
+    html+=`<div class="modal-row"><label>Siap</label><input type="number" id="m-siap" value="0" min="0"></div>`;
+    html+=`<div class="modal-row"><label>Tak Siap</label><input type="number" id="m-tak" value="0" min="0"></div>`;
+  } else {
+    html+=`<div class="modal-row"><label>Kontraktor</label><select id="m-kt">${CONTRACTORS.map(c=>`<option>${c}</option>`).join('')}</select></div>`;
+    html+=`<div class="modal-row"><label>Zon</label><select id="m-zon">${ZONES.map(z=>`<option>${z}</option>`).join('')}</select></div>`;
+    html+=`<div class="modal-row"><label>Jumlah Doket</label><input type="number" id="m-doket" value="0" min="0"></div>`;
+    html+=`<div class="modal-row"><label>Nilai RM (RM)</label><input type="number" id="m-rm" value="0" min="0"></div>`;
+  }
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function saveModal(){
+  const {type,id,mode}=modalCtx;
+  if(mode==='edit'){
+    const arr=type==='dv3'?dv3Data:type==='ppm'?ppmData:ktData;
+    const rec=arr.find(d=>d.id===id);
+    if(rec){
+      if(type==='dv3'||type==='ppm'){ rec.siap=+document.getElementById('m-siap').value; rec.tak=+document.getElementById('m-tak').value; }
+      else { rec.doket=+document.getElementById('m-doket').value; rec.rm=+document.getElementById('m-rm').value; }
+    }
+  } else {
+    const nid=uid(), year=+document.getElementById('m-year').value, month=+document.getElementById('m-month').value;
+    if(type==='dv3') dv3Data.push({id:nid,year,month,maint:document.getElementById('m-maint').value,siap:+document.getElementById('m-siap').value,tak:+document.getElementById('m-tak').value});
+    else if(type==='ppm') ppmData.push({id:nid,year,month,maint:document.getElementById('m-maint').value,siap:+document.getElementById('m-siap').value,tak:+document.getElementById('m-tak').value});
+    else ktData.push({id:nid,year,month,kt:document.getElementById('m-kt').value,zon:document.getElementById('m-zon').value,doket:+document.getElementById('m-doket').value,rm:+document.getElementById('m-rm').value});
+  }
+  closeModal(); showToast('Rekod berjaya disimpan');
+  if(type==='dv3') renderDV3();
+  else if(type==='ppm') renderPPM();
+  else renderKontraktor();
+  renderDashboard();
+}
+
+function delRow(type,id){
+  if(!confirm('Padam rekod ini? Tindakan ini tidak boleh dibatalkan.')) return;
+  if(type==='dv3') dv3Data=dv3Data.filter(d=>d.id!==id);
+  else if(type==='ppm') ppmData=ppmData.filter(d=>d.id!==id);
+  else ktData=ktData.filter(d=>d.id!==id);
+  if(type==='dv3') renderDV3();
+  else if(type==='ppm') renderPPM();
+  else renderKontraktor();
+  renderDashboard(); showToast('Rekod berjaya dipadam');
+}
+
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
+function closeModalOutside(e){ if(e.target===document.getElementById('modal-overlay')) closeModal(); }
+
+function showToast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+/* ---- TAB NAVIGATION ---- */
+function showTab(name,el){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='dv3') renderDV3();
+  else if(name==='ppm') renderPPM();
+  else if(name==='kontraktor') renderKontraktor();
+  else if(name==='dashboard') renderDashboard();
+}
+
+/* ---- SETTINGS ---- */
+function saveSettings(){
+  const sn=document.getElementById('s-sysname').value;
+  const d3n=document.getElementById('s-dv3name').value;
+  const pn=document.getElementById('s-ppmname').value;
+  const kn=document.getElementById('s-ktname').value;
+  document.getElementById('sys-title').textContent=sn;
+  document.getElementById('tab-dv3-name').textContent=d3n;
+  document.getElementById('tab-ppm-name').textContent=pn;
+  document.getElementById('tab-kontraktor-name').textContent=kn;
+  document.getElementById('dv3-page-title').textContent='Prestasi '+d3n;
+  document.getElementById('ppm-page-title').textContent='Prestasi '+pn;
+  document.getElementById('kt-page-title').textContent='Prestasi '+kn;
+  showToast('Tetapan berjaya disimpan!');
+}
+
+function setMode(mode){
+  document.getElementById('mode-light').classList.toggle('active',mode==='light');
+  document.getElementById('mode-dark').classList.toggle('active',mode==='dark');
+  if(mode==='dark') document.documentElement.setAttribute('data-theme','dark');
+  else document.documentElement.removeAttribute('data-theme');
+  setTimeout(()=>{ renderDashboard(); renderAllVisible(); },100);
+}
+
+function renderAllVisible(){
+  const active=document.querySelector('.tab-panel.active');
+  if(!active) return;
+  const id=active.id.replace('tab-','');
+  if(id==='dv3') renderDV3();
+  else if(id==='ppm') renderPPM();
+  else if(id==='kontraktor') renderKontraktor();
+}
+
+function updateAll(){ renderDashboard(); }
+
+/* ---- INIT ---- */
+renderDashboard();
+</script>
+</body>
+</html>
