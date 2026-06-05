@@ -558,20 +558,6 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ══════════════════════════════════════════════
-// KONFIGURASI — ADMIN SAHAJA
-// ══════════════════════════════════════════════
-const DEFAULT_SHEET_ID   = '1oPbeDl3kw_0Wo2QMLj_uspYuIi1U8FVgLWzPueZJ4mQ';
-const DEFAULT_SHEET_NAME = 'DV3', 'PPM', Kontraktor;
-const REFRESH_SECONDS    = 1800;
-// ══════════════════════════════════════════════
-
-document.getElementById('footer-sec').textContent = REFRESH_SECONDS;
-
-function getConfig(){
-  try{ const s=localStorage.getItem('usm_admin_config'); if(s)return JSON.parse(s); }catch(e){}
-  return {sheetId:DEFAULT_SHEET_ID,sheetName:DEFAULT_SHEET_NAME};
-}
 const MONTHS = ['Jan','Feb','Mac','Apr','Mei','Jun','Jul','Ogos','Sep','Okt','Nov','Dis'];
 const MONTHS_FULL = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
 const MAINTAINERS = ['Ahmad Fauzi','Razif Hamdan','Norzila Bt Hamid','Kamarul Ariff','Suhaimi Zakaria'];
