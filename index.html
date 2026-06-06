@@ -306,7 +306,7 @@ tr:hover td{background:var(--bg2);}
     <label>Tahun:</label><select id="kt-f-year" onchange="renderKontraktor()"><option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024" selected>2024</option><option value="2025">2025</option></select>
     <label>Bulan:</label><select id="kt-f-month" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
     <label>Kontraktor:</label><select id="kt-f-kt" onchange="renderKontraktor()"><option value="">Semua</option></select>
-    <label>Zon:</label><select id="kt-f-zon" onchange="renderKontraktor()"><option value="">Semua</option><option>Zon A</option><option>Zon B</option><option>Zon C</option></select>
+    <label>Zon:</label><select id="kt-f-zon" onchange="renderKontraktor()"><option value="">Semua</option><option>Zon Kampus</option><option>Zon Hospital</option></select>
   </div>
   <div class="metrics-grid" id="kt-metrics"></div>
   <div class="charts-grid">
@@ -966,7 +966,7 @@ function editRow(type,id){
     h+=field('Tak Siap',`<input type="number" id="m-tak" value="${rec.tak}" min="0">`);
   } else {
     h+=field('Kontraktor',`<input type="text" id="m-kt" value="${rec.kt}">`);
-    h+=field('Zon',`<select id="m-zon"><option>Zon A</option><option>Zon B</option><option>Zon C</option></select>`);
+    h+=field('Zon',`<select id="m-zon"><option>Zon Kampus</option><option>Zon Hospital</option></select>`);
     h+=field('Jml Doket',`<input type="number" id="m-doket" value="${rec.doket}" min="0">`);
     h+=field('Nilai RM',`<input type="number" id="m-rm" value="${rec.rm}" min="0">`);
   }
@@ -989,7 +989,7 @@ function openAddModal(type){
   } else {
     const kts=[...new Set(ktData.map(d=>d.kt))].sort();
     h+=field('Kontraktor',`<input type="text" id="m-kt" list="ml-kt" placeholder="Nama"><datalist id="ml-kt">${kts.map(k=>`<option>${k}</option>`).join('')}</datalist>`);
-    h+=field('Zon',`<select id="m-zon"><option>Zon A</option><option>Zon B</option><option>Zon C</option></select>`);
+    h+=field('Zon',`<select id="m-zon"><option>Zon Kampus</option><option>Zon Hospital</option></select>`);
     h+=field('Jml Doket',`<input type="number" id="m-doket" value="0" min="0">`);
     h+=field('Nilai RM',`<input type="number" id="m-rm" value="0" min="0">`);
   }
