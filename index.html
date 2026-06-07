@@ -3,974 +3,1356 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pemantauan Tenaga USM</title>
+<title>Sistem Pemantauan Prestasi – Unit Kejuruteraan Elektrik</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#1a1a2e;min-height:100vh}
-
-/* ── TOPBAR ── */
-.topbar{background:linear-gradient(135deg,#0f2640,#1a3a5c);color:white;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,0.2)}
-.topbar-left{display:flex;align-items:center;gap:12px}
-.topbar-icon{width:38px;height:38px;background:rgba(255,255,255,0.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
-.topbar-title{font-size:16px;font-weight:700}
-.topbar-sub{font-size:11px;opacity:.65;margin-top:2px}
-.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.live-pill{display:flex;align-items:center;gap:6px;font-size:12px;background:rgba(76,175,80,.2);border:1px solid rgba(76,175,80,.4);padding:5px 12px;border-radius:20px;color:#a5d6a7}
-.live-dot{width:7px;height:7px;border-radius:50%;background:#4caf50;box-shadow:0 0 6px #4caf50;animation:pulse 1.5s infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-.countdown-pill{font-size:11px;background:rgba(255,255,255,.08);padding:5px 12px;border-radius:20px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px}
-
-/* ── ADMIN MODAL ── */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;display:none;align-items:center;justify-content:center;padding:16px}
-.modal-bg.show{display:flex}
-.modal{background:white;border-radius:16px;padding:28px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.modal h2{font-size:16px;color:#1a3a5c;margin-bottom:6px;display:flex;align-items:center;gap:8px}
-.modal p{font-size:12px;color:#999;margin-bottom:16px}
-.modal label{font-size:12px;font-weight:600;color:#555;display:block;margin-top:10px;margin-bottom:4px}
-.modal input{width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #c0cdd8;font-size:13px;font-family:monospace;outline:none}
-.modal input:focus{border-color:#1a3a5c}
-.modal-btn{width:100%;margin-top:14px;padding:11px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
-.modal-btn:hover{background:#0f2640}
-.modal-close{float:right;background:none;border:none;font-size:18px;cursor:pointer;color:#aaa;margin-top:-4px}
-.modal-err{font-size:12px;color:#c0392b;margin-top:8px;display:none;padding:6px 10px;background:#fff0f0;border-radius:6px}
-
-/* ── LAYOUT ── */
-.container{max-width:1120px;margin:0 auto;padding:22px 16px}
-.status-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px}
-.status-left{display:flex;align-items:center;gap:8px;font-size:12px;color:#888}
-.btn-group{display:flex;gap:8px;flex-wrap:wrap}
-.icon-btn{font-size:12px;padding:7px 14px;border-radius:8px;border:1px solid #c0cdd8;background:white;color:#333;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;font-weight:500;white-space:nowrap}
-.icon-btn:hover{background:#f0f4f8;border-color:#1a3a5c;color:#1a3a5c}
-.icon-btn.pdf-btn{background:#1a3a5c;color:white;border-color:#1a3a5c}
-.icon-btn.pdf-btn:hover{background:#0f2640}
-.icon-btn.spinning i{animation:spin .8s linear infinite}
-@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-
-.filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;background:white;padding:12px 16px;border-radius:10px;border:1px solid #e0e6ed}
-.filter-row label{font-size:12px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.filter-row select{font-size:13px;padding:7px 12px;border-radius:8px;border:1px solid #c0cdd8;background:#f8fafc;color:#333;cursor:pointer;font-weight:500}
-
-/* ── METRIC CARDS ── */
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin-bottom:22px}
-.card{background:white;border-radius:12px;padding:14px 16px;border:1px solid #e0e6ed;transition:all .2s;position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:#e0e6ed}
-.card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.08)}
-.card.kampus::before{background:#1a5fa8}
-.card.hospital::before{background:#1e7e34}
-.card.solar-c::before{background:#e8a020}
-.card.jimat::before{background:#7c3aed}
-.card.eksport-rm::before{background:#0891b2}
-.card.total{background:linear-gradient(135deg,#0f2640,#1a3a5c);border-color:#1a3a5c}
-.card.total::before{display:none}
-.card-icon{font-size:20px;margin-bottom:8px;opacity:.5}
-.card-label{font-size:10px;color:#999;margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
-.card-value{font-size:18px;font-weight:700;color:#1a1a2e}
-.card-unit{font-size:10px;color:#bbb;margin-top:3px}
-.card.total .card-label{color:rgba(255,255,255,.6)}
-.card.total .card-value{color:white}
-.card.total .card-unit{color:rgba(255,255,255,.4)}
-.card.total .card-icon{color:rgba(255,255,255,.3)}
-.card.solar-c .card-value{color:#c47800}
-.card.kampus .card-value{color:#1a5fa8}
-.card.hospital .card-value{color:#1e7e34}
-.card.jimat .card-value{color:#7c3aed}
-.card.eksport-rm .card-value{color:#0891b2}
-
-/* ── CHARTS ── */
-.charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px}
-.chart-box{background:white;border-radius:12px;padding:18px;border:1px solid #e0e6ed}
-.chart-title{font-size:13px;font-weight:700;color:#333;margin-bottom:3px}
-.chart-sub{font-size:11px;color:#aaa;margin-bottom:12px}
-.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
-.legend span{display:flex;align-items:center;gap:5px;font-size:11px;color:#666;font-weight:500}
-.leg-dot{width:9px;height:9px;border-radius:2px}
-.trend-box{background:white;border-radius:12px;padding:18px;border:1px solid #e0e6ed;margin-bottom:22px}
-
-/* ── HEALTH ── */
-.sec-title{font-size:14px;font-weight:700;color:#333;margin-bottom:14px;display:flex;align-items:center;gap:6px}
-.health-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px}
-.hcard{flex:1;min-width:195px;background:white;border:1px solid #e0e6ed;border-radius:12px;padding:16px}
-.hhead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
-.hname{font-size:13px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:6px}
-.badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700}
-.b-ok{background:#e6f4ea;color:#1e7e34}
-.b-warn{background:#fff3cd;color:#856404}
-.hstat{font-size:12px;color:#999;margin:5px 0;display:flex;justify-content:space-between}
-.hstat span{color:#1a1a2e;font-weight:600;font-size:13px}
-.bar-bg{background:#eef0f3;border-radius:6px;height:8px;margin-top:12px}
-.bar-fill{height:8px;border-radius:6px;transition:width .6s}
-
-/* ── YOY ── */
-.yoy-section{margin-bottom:22px}
-.yoy-title{font-size:14px;font-weight:700;color:#333;margin-bottom:14px;display:flex;align-items:center;gap:6px}
-.yoy-top{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:12px 16px;background:white;border-radius:10px;border:1px solid #e0e6ed;font-size:13px}
-.yoy-top label{color:#888;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
-.yoy-top select{padding:6px 10px;border-radius:7px;border:1px solid #c0cdd8;background:#f8fafc;font-size:13px;color:#333;cursor:pointer}
-.range-box{background:white;border-radius:10px;border:1px solid #e0e6ed;padding:14px 16px;margin-bottom:14px}
-.range-box-title{font-size:12px;font-weight:700;color:#555;margin-bottom:12px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.4px}
-.month-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.mpill{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid #c0cdd8;background:white;color:#555;cursor:pointer;transition:all .15s;user-select:none}
-.mpill:hover{border-color:#1a3a5c;color:#1a3a5c}
-.mpill.in-range{background:#dde9f7;border-color:#1a5fa8;color:#1a5fa8}
-.mpill.range-start,.mpill.range-end{background:#1a3a5c;border-color:#1a3a5c;color:white}
-.range-info{font-size:12px;color:#888;margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.range-info strong{color:#1a3a5c}
-.range-reset{font-size:11px;padding:3px 10px;border-radius:6px;border:1px solid #c0cdd8;background:white;color:#888;cursor:pointer}
-.range-reset:hover{color:#c0392b;border-color:#c0392b}
-.yoy-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px}
-.yoy-card{background:white;border-radius:12px;padding:14px 16px;border:1px solid #e0e6ed;position:relative;overflow:hidden}
-.yoy-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-.yoy-card.kwh-card::before{background:#1a5fa8}
-.yoy-card.bil-card::before{background:#1e7e34}
-.yoy-card.solar-card::before{background:#e8a020}
-.yoy-card.jimat-card::before{background:#7c3aed}
-.yoy-card-label{font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-bottom:6px}
-.yoy-row{display:flex;justify-content:space-between;align-items:baseline;margin:4px 0}
-.yoy-year-label{font-size:11px;color:#aaa;font-weight:500}
-.yoy-val{font-size:14px;font-weight:700;color:#1a1a2e}
-.yoy-divider{border:none;border-top:1px dashed #eee;margin:7px 0}
-.yoy-delta{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;margin-top:5px;flex-wrap:wrap}
-.yoy-delta.up{color:#c0392b}
-.yoy-delta.down{color:#1e7e34}
-.yoy-delta.flat{color:#888}
-.yoy-charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px}
-.yoy-chart-box{background:white;border-radius:12px;padding:16px;border:1px solid #e0e6ed}
-.yoy-table-box{background:white;border-radius:12px;padding:16px;border:1px solid #e0e6ed;overflow-x:auto;margin-bottom:4px}
-.yoy-table{width:100%;border-collapse:collapse;font-size:12px}
-.yoy-table th{background:#f0f4f8;padding:8px 10px;text-align:left;font-weight:700;color:#555;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
-.yoy-table td{padding:8px 10px;border-bottom:1px solid #f4f6f9;color:#333;white-space:nowrap}
-.yoy-table tr:last-child td{border-bottom:none}
-.yoy-table tr:hover td{background:#fafbfc}
-.td-up{color:#c0392b!important;font-weight:700}
-.td-down{color:#1e7e34!important;font-weight:700}
-.td-num{text-align:right;font-weight:600}
-.td-total td{background:#f0f4f8!important;font-weight:700}
-.yoy-no-data{text-align:center;padding:30px;color:#bbb;font-size:13px;background:white;border-radius:12px;border:1px dashed #e0e6ed}
-
-/* ── STATES ── */
-.loading-state{text-align:center;padding:70px 20px;color:#bbb}
-.loading-state i{font-size:40px;display:block;margin-bottom:14px;animation:spin 1s linear infinite;color:#1a3a5c}
-.empty-state{text-align:center;padding:50px;color:#bbb;background:white;border-radius:12px;border:1px dashed #d0d8e0}
-.error-state{background:#fff5f5;border:1px solid #fca5a5;border-radius:12px;padding:20px;color:#c0392b;font-size:13px;line-height:1.8}
-.error-state strong{display:block;margin-bottom:8px;font-size:14px}
-
-.filter-divider{width:1px;height:24px;background:#e0e6ed;margin:0 4px}
-.toggle-group{display:flex;gap:6px}
-.toggle-btn{font-size:12px;padding:6px 14px;border-radius:20px;border:1.5px solid #c0cdd8;background:white;color:#888;cursor:pointer;font-weight:600;transition:all .2s}
-.toggle-btn.active.ssa{background:#1a5fa8;border-color:#1a5fa8;color:white}
-.toggle-btn.active.ssd{background:#1e7e34;border-color:#1e7e34;color:white}
-.toggle-btn.active:not(.ssa):not(.ssd){background:#1a3a5c;border-color:#1a3a5c;color:white}
-.toggle-btn:hover:not(.active){border-color:#1a3a5c;color:#1a3a5c}
-
-footer{text-align:center;font-size:11px;color:#bbb;padding:20px;border-top:1px solid #e0e6ed;margin-top:10px}
-
-/* ── PRINT / PDF ── */
-@media print{
-  body{background:white!important}
-  .topbar{background:#1a3a5c!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .status-bar,.filter-row,.btn-group,.range-box,.yoy-top,.modal-bg{display:none!important}
-  .container{padding:0!important;max-width:100%!important}
-  .charts,.yoy-charts{grid-template-columns:1fr 1fr!important}
-  .metrics{grid-template-columns:repeat(4,1fr)!important}
-  .card,.chart-box,.trend-box,.hcard,.yoy-card,.yoy-chart-box,.yoy-table-box{break-inside:avoid;box-shadow:none!important;border:1px solid #ddd!important}
-  .print-header{display:block!important}
-  canvas{max-width:100%}
+:root{
+  --primary:#1a56db;--primary-light:#e8f0fe;
+  --success:#0e9f6e;--success-light:#def7ec;
+  --warning:#c27803;--warning-light:#fef3c7;
+  --danger:#e02424;--danger-light:#fde8e8;
+  --sidebar-w:212px;
+  --bg1:#fff;--bg2:#f9fafb;--bg3:#f3f4f6;
+  --txt1:#111827;--txt2:#6b7280;
+  --bdr:rgba(0,0,0,0.09);--bdr2:rgba(0,0,0,0.17);
+  --r-md:8px;--r-lg:12px;
 }
-.print-header{display:none;text-align:center;padding:18px 0 12px;border-bottom:3px solid #1a3a5c;margin-bottom:20px}
-.print-header h1{font-size:20px;color:#1a3a5c;font-weight:700;letter-spacing:.3px}
-.print-header p{font-size:12px;color:#666;margin-top:4px}
-
-@media(max-width:640px){.charts{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.topbar{padding:12px 16px}.yoy-charts{grid-template-columns:1fr}}
+[data-theme=dark]{
+  --primary:#3b82f6;--primary-light:#1e3a5f;
+  --success:#10b981;--success-light:#064e3b;
+  --warning:#f59e0b;--warning-light:#451a03;
+  --danger:#ef4444;--danger-light:#450a0a;
+  --bg1:#1f2937;--bg2:#111827;--bg3:#0f172a;
+  --txt1:#f9fafb;--txt2:#9ca3af;
+  --bdr:rgba(255,255,255,0.09);--bdr2:rgba(255,255,255,0.17);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg3);color:var(--txt1);transition:background .2s,color .2s;}
+.topbar{background:var(--bg1);border-bottom:.5px solid var(--bdr);padding:0 18px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:50;gap:10px;}
+.topbar-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+.logo{width:34px;height:34px;background:var(--primary);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;flex-shrink:0;}
+.topbar-title{font-size:13px;font-weight:600;color:var(--txt1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-right{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.topbar-filters{display:flex;align-items:center;gap:6px;}
+.topbar-filters label{font-size:11px;color:var(--txt2);}
+select{font-size:12px;padding:5px 8px;border-radius:var(--r-md);border:.5px solid var(--bdr2);background:var(--bg2);color:var(--txt1);cursor:pointer;outline:none;}
+select:focus{border-color:var(--primary);}
+.sync-badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;display:inline-flex;align-items:center;gap:4px;}
+.sb-ok{background:var(--success-light);color:#065f46;}
+.sb-err{background:var(--danger-light);color:#9b1c1c;}
+.sb-wait{background:var(--warning-light);color:#92400e;}
+[data-theme=dark] .sb-ok{color:#6ee7b7;}[data-theme=dark] .sb-err{color:#fca5a5;}[data-theme=dark] .sb-wait{color:#fcd34d;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin .8s linear infinite;}
+.layout{display:flex;flex:1;}
+.sidebar{width:var(--sidebar-w);background:var(--bg1);border-right:.5px solid var(--bdr);padding:12px 0;flex-shrink:0;position:sticky;top:54px;height:calc(100vh - 54px);overflow-y:auto;}
+.nav-section{padding:0 14px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt2);margin-top:10px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 14px;font-size:13px;color:var(--txt2);cursor:pointer;border-left:2px solid transparent;transition:all .15s;margin:1px 8px 1px 0;border-radius:0 6px 6px 0;}
+.nav-item:hover{background:var(--bg2);color:var(--txt1);}
+.nav-item.active{background:var(--primary-light);color:var(--primary);border-left-color:var(--primary);font-weight:600;}
+.nav-item i{font-size:17px;}
+.content{flex:1;padding:16px;overflow-y:auto;}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+.page-title{font-size:15px;font-weight:600;color:var(--txt1);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+/* SYNC BANNER */
+.sync-banner{background:var(--bg1);border:.5px solid var(--bdr);border-radius:var(--r-lg);padding:11px 16px;margin-bottom:13px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.sync-banner>.icon{font-size:20px;color:var(--primary);}
+.sync-info{flex:1;min-width:160px;}
+.sync-info .st{font-size:12px;font-weight:600;color:var(--txt1);}
+.sync-info .ss{font-size:11px;color:var(--txt2);margin-top:2px;}
+.sync-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+/* METRICS */
+.metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:15px;}
+.metrics-grid-4{grid-template-columns:repeat(4,1fr);}
+.metric-card{background:var(--bg1);border-radius:var(--r-lg);border:.5px solid var(--bdr);padding:15px 16px;position:relative;overflow:hidden;}
+.metric-accent{position:absolute;top:0;left:0;width:4px;height:100%;}
+.metric-label{font-size:11px;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;}
+.metric-value{font-size:26px;font-weight:700;color:var(--txt1);line-height:1;}
+.metric-sub{font-size:11px;color:var(--txt2);margin-top:4px;}
+.metric-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:3px 8px;border-radius:20px;margin-top:5px;font-weight:500;}
+.badge-ok{background:var(--success-light);color:#065f46;}
+.badge-err{background:var(--danger-light);color:#9b1c1c;}
+.badge-warn{background:var(--warning-light);color:#92400e;}
+.badge-info{background:var(--primary-light);color:var(--primary);}
+[data-theme=dark] .badge-ok{color:#6ee7b7;}[data-theme=dark] .badge-err{color:#fca5a5;}[data-theme=dark] .badge-warn{color:#fcd34d;}
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:13px;}
+.chart-card{background:var(--bg1);border-radius:var(--r-lg);border:.5px solid var(--bdr);padding:15px;}
+.chart-card.full{grid-column:1/-1;}
+.chart-title{font-size:13px;font-weight:600;color:var(--txt1);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.chart-title i{font-size:15px;color:var(--primary);}
+.chart-wrap{position:relative;width:100%;overflow:visible;} .chart-wrap canvas{overflow:visible;display:block;}
+.chart-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;color:var(--txt2);font-size:12px;height:100%;}
+.chart-empty i{font-size:28px;opacity:.35;}
+/* FILTERS */
+.filters-bar{background:var(--bg1);border-radius:var(--r-lg);border:.5px solid var(--bdr);padding:10px 15px;display:flex;align-items:center;gap:10px;margin-bottom:13px;flex-wrap:wrap;}
+.filters-bar label{font-size:12px;color:var(--txt2);font-weight:500;}
+.range-sep{font-size:12px;color:var(--txt2);padding:0 2px;}
+.filter-group{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;}
+.filter-group label{white-space:nowrap;}
+.range-badge{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--primary-light);color:var(--primary);font-weight:500;white-space:nowrap;}
+/* TABLE */
+.table-wrap{background:var(--bg1);border-radius:var(--r-lg);border:.5px solid var(--bdr);overflow:hidden;margin-top:13px;}
+.table-header{padding:12px 16px;border-bottom:.5px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;}
+.table-header span{font-size:14px;font-weight:600;color:var(--txt1);}
+.table-sub{padding:8px 15px;border-bottom:.5px solid var(--bdr);display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg2);}
+.table-sub label{font-size:12px;color:var(--txt2);}
+.table-scroll{overflow-x:auto;max-height:420px;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{padding:8px 12px;text-align:left;background:var(--bg2);color:var(--txt2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:.5px solid var(--bdr);white-space:nowrap;position:sticky;top:0;z-index:2;}
+td{padding:9px 12px;border-bottom:.5px solid var(--bdr);color:var(--txt1);white-space:nowrap;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--bg2);}
+/* BUTTONS */
+.btn{font-size:12px;padding:6px 12px;border-radius:var(--r-md);cursor:pointer;border:.5px solid var(--bdr2);background:var(--bg2);color:var(--txt1);font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
+.btn:hover{background:var(--bg3);}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary);}
+.btn-primary:hover{opacity:.88;}
+.btn-sm{font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;border:.5px solid var(--bdr2);background:var(--bg2);color:var(--txt1);display:inline-flex;align-items:center;gap:4px;transition:all .15s;}
+.btn-sm:hover{background:var(--bg3);}
+.btn-del{color:var(--danger);border-color:#fca5a5;background:var(--danger-light);}
+.btn-del:hover{opacity:.8;}
+.pct-bar{height:5px;border-radius:3px;background:var(--bg3);overflow:hidden;}
+.pct-fill{height:100%;border-radius:3px;}
+.pct-cell{display:flex;align-items:center;gap:7px;}
+/* LOADING */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;}
+.overlay.show{display:flex;}
+.overlay-box{background:var(--bg1);border-radius:var(--r-lg);padding:28px 36px;text-align:center;border:.5px solid var(--bdr);min-width:240px;}
+.overlay-box i{font-size:36px;color:var(--primary);display:block;margin-bottom:12px;}
+.overlay-box p{font-size:14px;color:var(--txt1);font-weight:500;}
+.overlay-box small{font-size:12px;color:var(--txt2);}
+/* SETTINGS */
+.settings-wrap{max-width:600px;}
+.settings-section{background:var(--bg1);border-radius:var(--r-lg);border:.5px solid var(--bdr);padding:20px;margin-bottom:13px;}
+.settings-title{font-size:14px;font-weight:600;color:var(--txt1);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.settings-row{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:13px;gap:12px;}
+.settings-row:last-child{margin-bottom:0;}
+.settings-row label{font-size:13px;color:var(--txt2);font-weight:500;padding-top:8px;flex-shrink:0;}
+.settings-row input[type=text],.settings-row input[type=url]{font-size:13px;padding:7px 11px;border-radius:var(--r-md);border:.5px solid var(--bdr2);background:var(--bg2);color:var(--txt1);width:100%;max-width:340px;outline:none;}
+.settings-row input:focus{border-color:var(--primary);}
+.toggle-group{display:flex;gap:6px;}
+.toggle-btn{font-size:12px;padding:6px 14px;border-radius:var(--r-md);cursor:pointer;border:.5px solid var(--bdr2);background:var(--bg2);color:var(--txt2);font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.toggle-btn.active{background:var(--primary-light);color:var(--primary);border-color:var(--primary);}
+/* STEPS */
+.steps{counter-reset:step;list-style:none;padding:0;}
+.steps li{counter-increment:step;display:flex;gap:12px;margin-bottom:12px;font-size:12px;color:var(--txt2);line-height:1.6;}
+.steps li::before{content:counter(step);background:var(--primary);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.steps li b{color:var(--txt1);}
+.code-block{background:var(--bg3);border-radius:var(--r-md);padding:14px;font-size:11px;font-family:'Consolas',monospace;color:var(--txt1);line-height:1.7;overflow-x:auto;border:.5px solid var(--bdr);max-height:300px;overflow-y:auto;white-space:pre;}
+/* ALERT BOX */
+.alert{padding:12px 16px;border-radius:var(--r-md);font-size:12px;margin-bottom:12px;line-height:1.6;}
+.alert-info{background:var(--primary-light);border:.5px solid rgba(26,86,219,.2);color:var(--txt1);}
+.alert-warn{background:var(--warning-light);border:.5px solid rgba(194,120,3,.2);color:var(--txt1);}
+.alert-ok{background:var(--success-light);border:.5px solid rgba(14,159,110,.2);color:var(--txt1);}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg1);border-radius:var(--r-lg);padding:24px;width:380px;border:.5px solid var(--bdr);box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:16px;color:var(--txt1);display:flex;align-items:center;gap:8px;}
+.modal-row{margin-bottom:11px;}
+.modal-row label{display:block;font-size:12px;color:var(--txt2);margin-bottom:4px;font-weight:500;}
+.modal-row input,.modal-row select{width:100%;font-size:13px;padding:7px 10px;border-radius:var(--r-md);border:.5px solid var(--bdr2);background:var(--bg2);color:var(--txt1);outline:none;}
+.modal-row input:focus,.modal-row select:focus{border-color:var(--primary);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;z-index:600;background:var(--txt1);color:var(--bg1);padding:10px 18px;border-radius:var(--r-md);font-size:13px;font-weight:500;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;display:flex;align-items:center;gap:7px;max-width:340px;}
+.toast.show{opacity:1;transform:translateY(0);}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:4px;}
+@media(max-width:900px){.charts-grid{grid-template-columns:1fr;}.metrics-grid{grid-template-columns:1fr 1fr;}.metrics-grid-4{grid-template-columns:1fr 1fr;}}
+@media(max-width:600px){.sidebar{display:none;}.metrics-grid{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>
 
-<!-- ADMIN MODAL -->
-<div class="modal-bg" id="admin-modal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeAdmin()">✕</button>
-    <h2><i class="ti ti-shield-lock" style="color:#1a3a5c"></i> Tetapan Admin</h2>
-    <p>Hanya admin yang perlu mengubah tetapan ini.</p>
-    <label>Google Sheets ID:</label>
-    <input type="text" id="input-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
-    <label>Nama Tab Sheet:</label>
-    <input type="text" id="input-sheet-name" placeholder="JPPF">
-    <div class="modal-err" id="modal-err">⚠ Sila isi kedua-dua ruangan</div>
-    <button class="modal-btn" onclick="saveAdmin()"><i class="ti ti-device-floppy"></i> Simpan & Muat Semula</button>
+<!-- LOADING OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="overlay-box">
+    <i class="ti ti-refresh spin"></i>
+    <p id="overlay-msg">Memuatkan data...</p>
+    <small id="overlay-sub">Menyambung ke Google Sheets</small>
   </div>
 </div>
 
+<div class="app">
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="topbar-left">
-    <div class="topbar-icon"><i class="ti ti-bolt"></i></div>
-    <div>
-      <div class="topbar-title">Sistem Pemantauan Tenaga USM</div>
-      <div class="topbar-sub">Universiti Sains Malaysia — Kampus & HPUSM</div>
-    </div>
+    <div class="logo"><i class="ti ti-bolt"></i></div>
+    <span class="topbar-title" id="sys-title">Sistem Pemantauan Prestasi – Unit Kejuruteraan Elektrik</span>
   </div>
   <div class="topbar-right">
-    <div class="live-pill"><span class="live-dot"></span> LIVE</div>
-    <div class="countdown-pill"><i class="ti ti-refresh"></i> Refresh: <strong id="countdown-label">—</strong></div>
+    <span id="global-badge" class="sync-badge sb-wait"><i class="ti ti-refresh spin"></i> Memuatkan</span>
+    <button class="btn" onclick="refreshAll()"><i class="ti ti-refresh" id="rfr-icon"></i> Refresh</button>
+    <div class="topbar-filters">
+      <label>Bulan:</label>
+      <span style="font-size:11px;color:var(--txt2);">Dari:</span>
+      <select id="glob-month-from" onchange="updateAll()" style="font-size:11px;padding:4px 6px">
+        <option value="0">Semua</option>
+        <option>Jan</option><option>Feb</option><option>Mac</option><option>April</option>
+        <option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option>
+        <option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option>
+      </select>
+      <span style="font-size:11px;color:var(--txt2);">Hingga:</span>
+      <select id="glob-month-to" onchange="updateAll()" style="font-size:11px;padding:4px 6px">
+        <option value="0">Semua</option>
+        <option>Jan</option><option>Feb</option><option>Mac</option><option>April</option>
+        <option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option>
+        <option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option>
+      </select>
+      <label>Tahun:</label>
+      <select id="glob-year" onchange="updateAll()">
+        <option value="0">Semua</option>
+        <option value="2023">2023</option><option value="2024">2024</option>
+        <option value="2025">2025</option><option value="2026">2026</option>
+      </select>
+    </div>
   </div>
 </div>
 
-<div class="container">
-  <!-- print header (hidden on screen) -->
-  <div class="print-header">
-    <h1>Laporan Pemantauan Tenaga Elektrik USMKK</h1>
-    <p id="print-date"></p>
-    <p id="print-scope" style="font-size:13px;color:#1a3a5c;font-weight:600;margin-top:4px"></p>
-  </div>
+<div class="layout">
+<div class="sidebar">
+  <div class="nav-section">Menu Utama</div>
+  <div class="nav-item active" onclick="showTab('dashboard',this)"><i class="ti ti-layout-dashboard"></i><span>Dashboard</span></div>
+  <div class="nav-item" onclick="showTab('dv3',this)"><i class="ti ti-file-check"></i><span id="tab-dv3-name">DV3</span></div>
+  <div class="nav-item" onclick="showTab('ppm',this)"><i class="ti ti-tool"></i><span id="tab-ppm-name">PPM</span></div>
+  <div class="nav-item" onclick="showTab('kontraktor',this)"><i class="ti ti-building-community"></i><span id="tab-kontraktor-name">Kontraktor</span></div>
+  <div class="nav-section">Sistem</div>
+  <div class="nav-item" onclick="showTab('tetapan',this)"><i class="ti ti-settings"></i><span>Tetapan</span></div>
+</div>
 
-  <div class="status-bar">
-    <div class="status-left"><i class="ti ti-database"></i><span id="status-label">Memuat data...</span></div>
-    <div class="btn-group">
-      <button class="icon-btn" id="refresh-btn" onclick="manualRefresh()"><i class="ti ti-refresh"></i> Refresh</button>
-      <button class="icon-btn pdf-btn" onclick="printPDF()"><i class="ti ti-file-type-pdf"></i> Cetak / Simpan PDF</button>
-      <button class="icon-btn" onclick="openAdmin()" title="Admin"><i class="ti ti-settings"></i></button>
-    </div>
-  </div>
+<div class="content">
 
-  <div class="filter-row">
-    <label><i class="ti ti-filter"></i> Tapis:</label>
-    <select id="sel-tahun" onchange="updateDisplay()"><option>-- Semua Tahun --</option></select>
-    <select id="sel-bulan" onchange="updateDisplay()"><option>-- Semua Bulan --</option></select>
-    <div class="filter-divider"></div>
-    <label><i class="ti ti-building"></i> Paparan:</label>
-    <div class="toggle-group">
-      <button class="toggle-btn active" id="tog-ssa" onclick="toggleSS('ssa')">SS-A (Kampus)</button>
-      <button class="toggle-btn active" id="tog-ssd" onclick="toggleSS('ssd')">SS-D (HPUSM)</button>
-    </div>
+<!-- ===== DASHBOARD ===== -->
+<div class="tab-panel active" id="tab-dashboard">
+  <div class="page-title"><i class="ti ti-layout-dashboard"></i>Dashboard Utama</div>
+  <div class="metrics-grid" id="dash-metrics">
+    <div style="grid-column:1/-1;text-align:center;padding:28px;color:var(--txt2)"><i class="ti ti-refresh spin" style="font-size:24px;display:block;margin-bottom:8px"></i>Memuatkan data...</div>
   </div>
-
-  <div id="main-content">
-    <div class="loading-state"><i class="ti ti-loader"></i>Memuat data dari Google Sheets...</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-bar"></i>Carta 1 – Prestasi DV3 (Doket / Tahun)</div><div class="chart-wrap" style="height:210px"><canvas id="c-dv3-bar"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-bar"></i>Carta 2 – Prestasi PPM (PPM / Bulan)</div><div class="chart-wrap" style="height:210px"><canvas id="c-ppm-bar"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-line"></i>Carta 3 – Nilai RM Kontraktor (/ Tahun)</div><div class="chart-wrap" style="height:210px"><canvas id="c-rm-line"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-medal"></i>Carta 4 – Ranking Penyenggara (% Siap DV3)</div><div class="chart-wrap" style="height:210px"><canvas id="c-rank-maint"></canvas></div></div>
+    <div class="chart-card full"><div class="chart-title"><i class="ti ti-trophy"></i>Carta 5 – Ranking Kontraktor (Jumlah RM)</div><div class="chart-wrap" style="height:200px"><canvas id="c-rank-kt"></canvas></div></div>
   </div>
 </div>
 
-<footer>Sistem Pemantauan Tenaga &copy; USM &mdash; Auto-refresh setiap <span id="footer-sec"></span> saat</footer>
+<!-- ===== DV3 ===== -->
+<div class="tab-panel" id="tab-dv3">
+  <div class="page-title"><i class="ti ti-file-check"></i><span id="dv3-page-title">Prestasi DV3</span></div>
+  <div class="sync-banner">
+    <i class="ti ti-brand-google icon"></i>
+    <div class="sync-info"><div class="st">Google Sheets – Tab DV3</div><div class="ss" id="dv3-sync-sub">Memuatkan...</div></div>
+    <div class="sync-actions">
+      <span class="sync-badge sb-wait" id="dv3-badge"><i class="ti ti-refresh spin"></i> Memuatkan</span>
+      <button class="btn" onclick="fetchSheet('dv3',true)"><i class="ti ti-refresh"></i> Refresh</button>
+    </div>
+  </div>
+  <div class="filters-bar">
+    <div class="filter-group"><label>Tahun:</label><select id="dv3-f-year" onchange="renderDV3()"><option value="0">Semua</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select></div>
+    <div class="filter-group"><label>Dari Bulan:</label><select id="dv3-f-month-from" onchange="renderDV3()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="dv3-f-month-to" onchange="renderDV3()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select></div>
+    <div class="filter-group"><label>Penyenggara:</label><select id="dv3-f-maint" onchange="renderDV3()"><option value="">Semua</option></select></div>
+    <span class="range-badge" id="dv3-range-badge">Semua Bulan</span>
+  </div>
+  <div class="metrics-grid metrics-grid-4" id="dv3-metrics"></div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-bar"></i>Prestasi Penyenggara (Siap vs Tak Siap)</div><div class="chart-wrap" style="height:220px"><canvas id="c-dv3-staff"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-line"></i>Trend Tahunan DV3</div><div class="chart-wrap" style="height:220px"><canvas id="c-dv3-trend"></canvas></div></div>
+  </div>
+  <div class="table-wrap">
+    <div class="table-header"><span><i class="ti ti-table" style="vertical-align:-2px;margin-right:6px"></i>Rekod DV3</span><button class="btn btn-primary" onclick="openAddModal('dv3')"><i class="ti ti-plus"></i> Tambah</button></div>
+    <div class="table-sub">
+      <label>Penyenggara:</label><select id="dv3-t-maint" onchange="renderDV3()"><option value="">Semua</option></select>
+      <label>Dari Bulan:</label><select id="dv3-f-month-from" onchange="renderDV3()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="dv3-f-month-to" onchange="renderDV3()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
+      <label>Tahun:</label><select id="dv3-t-year" onchange="renderDV3()"><option value="0">Semua</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select>
+    </div>
+    <div class="table-scroll"><table><thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Penyenggara</th><th>Tak Siap</th><th>Siap</th><th>Jml Doket</th><th>% Siap</th><th>Tindakan</th></tr></thead><tbody id="dv3-tbody"></tbody></table></div>
+  </div>
+</div>
 
-<script>
-// ══════════════════════════════════════════════
-// KONFIGURASI — ADMIN SAHAJA
-// ══════════════════════════════════════════════
-const DEFAULT_SHEET_ID   = '1qeBr-3Ja9eGbtIXN_DuGq0ig6xo_UJLcMmZXKmjcRQg';
-const DEFAULT_SHEET_NAME = 'JPPF';
-const REFRESH_SECONDS    = 30;
-// ══════════════════════════════════════════════
+<!-- ===== PPM ===== -->
+<div class="tab-panel" id="tab-ppm">
+  <div class="page-title"><i class="ti ti-tool"></i><span id="ppm-page-title">Prestasi PPM</span></div>
+  <div class="sync-banner">
+    <i class="ti ti-brand-google icon"></i>
+    <div class="sync-info"><div class="st">Google Sheets – Tab PPM</div><div class="ss" id="ppm-sync-sub">Memuatkan...</div></div>
+    <div class="sync-actions">
+      <span class="sync-badge sb-wait" id="ppm-badge"><i class="ti ti-refresh spin"></i> Memuatkan</span>
+      <button class="btn" onclick="fetchSheet('ppm',true)"><i class="ti ti-refresh"></i> Refresh</button>
+    </div>
+  </div>
+  <div class="filters-bar">
+    <div class="filter-group"><label>Tahun:</label><select id="ppm-f-year" onchange="renderPPM()"><option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select></div>
+    <div class="filter-group"><label>Dari Bulan:</label><select id="ppm-f-month-from" onchange="renderPPM()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="ppm-f-month-to" onchange="renderPPM()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select></div>
+    <div class="filter-group"><label>Penyenggara:</label><select id="ppm-f-maint" onchange="renderPPM()"><option value="">Semua</option></select></div>
+    <span class="range-badge" id="ppm-range-badge">Semua Bulan</span>
+  </div>
+  <div class="metrics-grid metrics-grid-4" id="ppm-metrics"></div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-bar"></i>Prestasi Penyenggara PPM</div><div class="chart-wrap" style="height:220px"><canvas id="c-ppm-staff"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-line"></i>Trend Bulanan PPM</div><div class="chart-wrap" style="height:220px"><canvas id="c-ppm-trend"></canvas></div></div>
+  </div>
+  <div class="table-wrap">
+    <div class="table-header"><span><i class="ti ti-table" style="vertical-align:-2px;margin-right:6px"></i>Rekod PPM</span><button class="btn btn-primary" onclick="openAddModal('ppm')"><i class="ti ti-plus"></i> Tambah</button></div>
+    <div class="table-sub">
+      <label>Penyenggara:</label><select id="ppm-t-maint" onchange="renderPPM()"><option value="">Semua</option></select>
+      <label>Dari Bulan:</label><select id="ppm-f-month-from" onchange="renderPPM()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="ppm-f-month-to" onchange="renderPPM()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
+      <label>Tahun:</label><select id="ppm-t-year" onchange="renderPPM()"><option value="0">Semua</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select>
+    </div>
+    <div class="table-scroll"><table><thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Penyenggara</th><th>Tak Siap</th><th>Siap</th><th>Jml PPM</th><th>% Siap</th><th>Tindakan</th></tr></thead><tbody id="ppm-tbody"></tbody></table></div>
+  </div>
+</div>
 
-document.getElementById('footer-sec').textContent = REFRESH_SECONDS;
-document.getElementById('print-date').textContent = 'Dicetak: ' + new Date().toLocaleString('ms-MY');
+<!-- ===== KONTRAKTOR ===== -->
+<div class="tab-panel" id="tab-kontraktor">
+  <div class="page-title"><i class="ti ti-building-community"></i><span id="kt-page-title">Prestasi Kontraktor</span></div>
+  <div class="sync-banner">
+    <i class="ti ti-brand-google icon"></i>
+    <div class="sync-info"><div class="st">Google Sheets – Tab Kontraktor</div><div class="ss" id="kt-sync-sub">Memuatkan...</div></div>
+    <div class="sync-actions">
+      <span class="sync-badge sb-wait" id="kt-badge"><i class="ti ti-refresh spin"></i> Memuatkan</span>
+      <button class="btn" onclick="fetchSheet('kt',true)"><i class="ti ti-refresh"></i> Refresh</button>
+    </div>
+  </div>
+  <div class="filters-bar">
+    <div class="filter-group"><label>Tahun:</label><select id="kt-f-year" onchange="renderKontraktor()"><option value="0">Semua</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select></div>
+    <div class="filter-group"><label>Dari Bulan:</label><select id="kt-f-month-from" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="kt-f-month-to" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select></div>
+    <div class="filter-group"><label>Kontraktor:</label><select id="kt-f-kt" onchange="renderKontraktor()"><option value="">Semua</option></select></div>
+    <div class="filter-group"><label>Zon:</label><select id="kt-f-zon" onchange="renderKontraktor()"><option value="">Semua</option><option>Zon A</option><option>Zon B</option><option>Zon C</option></select></div>
+    <span class="range-badge" id="kt-range-badge">Semua Bulan</span>
+  </div>
+  <div class="metrics-grid" id="kt-metrics"></div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-bar"></i>Doket Kontraktor</div><div class="chart-wrap" style="height:220px"><canvas id="c-kt-doket"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-cash"></i>Nilai RM Kontraktor</div><div class="chart-wrap" style="height:220px"><canvas id="c-kt-rm"></canvas></div></div>
+  </div>
+  <div class="table-wrap">
+    <div class="table-header"><span><i class="ti ti-table" style="vertical-align:-2px;margin-right:6px"></i>Rekod Kontraktor</span><button class="btn btn-primary" onclick="openAddModal('kontraktor')"><i class="ti ti-plus"></i> Tambah</button></div>
+    <div class="table-sub">
+      <label>Kontraktor:</label><select id="kt-t-kt" onchange="renderKontraktor()"><option value="">Semua</option></select>
+      <label>Dari Bulan:</label><select id="kt-f-month-from" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="kt-f-month-to" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
+      <label>Tahun:</label><select id="kt-t-year" onchange="renderKontraktor()"><option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select>
+    </div>
+    <div class="table-scroll"><table><thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Kontraktor</th><th>Zon</th><th>Jml Doket</th><th>Jumlah RM</th><th>Tindakan</th></tr></thead><tbody id="kt-tbody"></tbody></table></div>
+  </div>
+</div>
 
-function getConfig(){
-  try{ const s=localStorage.getItem('usm_admin_config'); if(s)return JSON.parse(s); }catch(e){}
-  return {sheetId:DEFAULT_SHEET_ID,sheetName:DEFAULT_SHEET_NAME};
-}
-let CONFIG=getConfig();
-let allRows=[],chartKwh,chartBil,chartTrend,countdownTimer,secondsLeft=REFRESH_SECONDS;
+<!-- ===== TETAPAN ===== -->
+<div class="tab-panel" id="tab-tetapan">
+  <div class="page-title"><i class="ti ti-settings"></i>Tetapan Sistem</div>
+  <div class="settings-wrap">
 
-const BULAN_ORDER=['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
-const BULAN_SHORT=['Jan','Feb','Mac','Apr','Mei','Jun','Jul','Ogos','Sep','Okt','Nov','Dis'];
-
-function normBulan(v){const s=String(v).trim().toLowerCase().substring(0,3);const m={jan:'Januari',feb:'Februari',mar:'Mac',mac:'Mac',apr:'April',may:'Mei',mei:'Mei',jun:'Jun',jul:'Julai',aug:'Ogos',ogos:'Ogos',sep:'September',oct:'Oktober',okt:'Oktober',nov:'November',dec:'Disember',dis:'Disember'};return m[s]||String(v).trim()}
-function fmt(n){return(!n||isNaN(n))?'—':Math.round(n).toLocaleString('ms-MY')}
-function fmtRM(n){return(!n||isNaN(n))?'—':'RM '+Math.round(n).toLocaleString('ms-MY')}
-
-// ── PRINT PDF ──
-function printPDF(){
-  const tahun = document.getElementById('sel-tahun').value;
-  const bulan = document.getElementById('sel-bulan').value;
-  const tStr = tahun.includes('Semua') ? 'Semua Tahun' : tahun;
-  const bStr = bulan.includes('Semua') ? 'Semua Bulan' : bulan;
-  let scopeStr = '';
-  if(!tahun.includes('Semua') && !bulan.includes('Semua')) scopeStr = `Tempoh: ${bStr} ${tStr}`;
-  else if(!tahun.includes('Semua')) scopeStr = `Tahun: ${tStr}`;
-  else if(!bulan.includes('Semua')) scopeStr = `Bulan: ${bStr} (Semua Tahun)`;
-  else scopeStr = 'Tempoh: Semua Data';
-  document.getElementById('print-date').textContent = 'Dicetak: ' + new Date().toLocaleString('ms-MY');
-  document.getElementById('print-scope').textContent = scopeStr;
-  window.print();
-}
-
-// ── ADMIN ──
-function openAdmin(){document.getElementById('input-sheet-id').value=CONFIG.sheetId;document.getElementById('input-sheet-name').value=CONFIG.sheetName;document.getElementById('admin-modal').classList.add('show')}
-function closeAdmin(){document.getElementById('admin-modal').classList.remove('show')}
-function saveAdmin(){
-  const id=document.getElementById('input-sheet-id').value.trim();
-  const name=document.getElementById('input-sheet-name').value.trim();
-  if(!id||!name){document.getElementById('modal-err').style.display='block';return}
-  CONFIG={sheetId:id,sheetName:name};
-  localStorage.setItem('usm_admin_config',JSON.stringify(CONFIG));
-  closeAdmin();allRows=[];loadData();
-}
-
-// ── FETCH ──
-async function fetchData(){
-  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(CONFIG.sheetName)}&t=${Date.now()}`;
-  const res=await fetch(url,{cache:'no-store'});
-  if(!res.ok) throw new Error('HTTP '+res.status+' — Pastikan sheet dikongsi (Share → Anyone with link → Viewer)');
-  return await res.text();
-}
-
-function parseCSV(csv){
-  return csv.split('\n').map(line=>{
-    const cols=[];let cur='',inQ=false;
-    for(const c of line){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur='';}else cur+=c;}
-    cols.push(cur.trim());return cols;
-  });
-}
-
-function detectColumns(lines){
-  for(let i=0;i<Math.min(lines.length,15);i++){
-    const row=lines[i].map(c=>c.toLowerCase().replace(/"/g,'').trim());
-    if(!row.some(c=>c.includes('bulan'))) continue;
-    const m={};
-    row.forEach((h,idx)=>{
-      if(h.includes('bulan'))m.bulan=idx;
-      else if(h.includes('tahun')||h.includes('year'))m.tahun=idx;
-      else if((h.includes('ss-a')||h.includes('ssa'))&&h.includes('kwh'))m.ssaKwh=idx;
-      else if((h.includes('ss-d')||h.includes('ssd'))&&h.includes('kwh'))m.ssdKwh=idx;
-      else if(h.includes('total')&&h.includes('kwh'))m.totalKwh=idx;
-      else if((h.includes('ss-a')||h.includes('ssa'))&&h.includes('rm'))m.ssaRm=idx;
-      else if((h.includes('ss-d')||h.includes('ssd'))&&h.includes('rm'))m.ssdRm=idx;
-      else if(h.includes('total')&&h.includes('rm'))m.totalRm=idx;
-      else if(h.includes('solar')&&h.includes('kwh'))m.solarKwh=idx;
-      // NEW: Amaun Eksport (RM) — checked before eksport kwh
-      else if((h.includes('eksport')||h.includes('export'))&&h.includes('rm'))m.eksportRm=idx;
-      else if((h.includes('amaun'))&&(h.includes('eksport')||h.includes('export')))m.eksportRm=idx;
-      // Penjimatan Sebenar USM
-      else if(h.includes('penjimatan'))m.penjimatan=idx;
-      else if(h.includes('saving')&&h.includes('usm'))m.penjimatan=idx;
-      // eksport kWh (must come after eksport RM check)
-      else if((h.includes('eksport')||h.includes('export'))&&!h.includes('rm'))m.eksportKwh=idx;
-      else if(h.includes('tenaga')&&h.includes('eksport'))m.eksportKwh=idx;
-    });
-    return{headerIdx:i,colMap:m};
-  }
-  return null;
-}
-
-function buildRows(lines,headerIdx,colMap){
-  const rows=[];
-  for(let i=headerIdx+1;i<lines.length;i++){
-    const row=lines[i].map(c=>c.replace(/"/g,'').trim());
-    const bRaw=row[colMap.bulan];
-    if(!bRaw||bRaw==='') continue;
-    const n=k=>{const v=parseFloat((row[colMap[k]]||'').replace(/,/g,''));return isNaN(v)?0:v;};
-    rows.push({
-      bulan:normBulan(bRaw),
-      tahun:String(colMap.tahun!==undefined?row[colMap.tahun]:'').trim(),
-      ssaKwh:n('ssaKwh'),ssdKwh:n('ssdKwh'),totalKwh:n('totalKwh'),
-      ssaRm:n('ssaRm'),ssdRm:n('ssdRm'),totalRm:n('totalRm'),
-      solarKwh:n('solarKwh'),eksportKwh:n('eksportKwh'),
-      eksportRm:n('eksportRm'),        // NEW
-      penjimatan:n('penjimatan')       // NEW
-    });
-  }
-  return rows;
-}
-
-async function loadData(isManual=false){
-  const btn=document.getElementById('refresh-btn');
-  if(isManual)btn.classList.add('spinning');
-  document.getElementById('status-label').textContent='Memuat data...';
-  try{
-    const csv=await fetchData();
-    const lines=parseCSV(csv);
-    const detected=detectColumns(lines);
-    if(!detected) throw new Error('Lajur "Bulan" tidak ditemui. Semak nama tab sheet.');
-    const rows=buildRows(lines,detected.headerIdx,detected.colMap);
-    if(!rows.length) throw new Error('Tiada baris data yang sah.');
-    const isFirst=allRows.length===0;
-    allRows=rows;
-    document.getElementById('status-label').textContent=`✓ ${rows.length} rekod | ${new Date().toLocaleTimeString('ms-MY')} | Sheet: ${CONFIG.sheetName}`;
-    if(isFirst){buildDropdowns();renderShell();}else{buildDropdowns();updateDisplay();}
-  }catch(err){
-    document.getElementById('status-label').textContent='⚠ '+err.message;
-    if(allRows.length===0){
-      document.getElementById('main-content').innerHTML=`<div class="error-state"><strong><i class="ti ti-wifi-off"></i> Gagal sambung ke Google Sheets</strong>${err.message}<br><br><strong>Semak:</strong><br>1. Sheet dikongsi: Share → Anyone with link → Viewer<br>2. Klik ⚙ untuk semak Sheet ID dan nama tab</div>`;
-    }
-  }finally{
-    btn.classList.remove('spinning');
-    resetCountdown();
-  }
-}
-
-function manualRefresh(){clearInterval(countdownTimer);loadData(true)}
-
-function resetCountdown(){
-  secondsLeft=REFRESH_SECONDS;clearInterval(countdownTimer);
-  countdownTimer=setInterval(()=>{
-    secondsLeft--;
-    const m=Math.floor(secondsLeft/60),s=secondsLeft%60;
-    document.getElementById('countdown-label').textContent=m>0?`${m}m ${s}s`:`${s}s`;
-    if(secondsLeft<=0){clearInterval(countdownTimer);loadData();}
-  },1000);
-}
-
-function buildDropdowns(){
-  const years=[...new Set(allRows.map(r=>r.tahun).filter(Boolean))].sort();
-  const selT=document.getElementById('sel-tahun');const pT=selT.value;
-  selT.innerHTML='<option>-- Semua Tahun --</option>';
-  years.forEach(y=>{const o=document.createElement('option');o.textContent=y;if(y===pT)o.selected=true;selT.appendChild(o);});
-  const selB=document.getElementById('sel-bulan');const pB=selB.value;
-  selB.innerHTML='<option>-- Semua Bulan --</option>';
-  BULAN_ORDER.forEach(b=>{const o=document.createElement('option');o.textContent=b;if(b===pB)o.selected=true;selB.appendChild(o);});
-}
-
-function getFiltered(){
-  const t=document.getElementById('sel-tahun').value,b=document.getElementById('sel-bulan').value;
-  let rows=allRows;
-  if(!t.includes('Semua'))rows=rows.filter(r=>r.tahun===t);
-  if(!b.includes('Semua'))rows=rows.filter(r=>r.bulan===b);
-  return rows;
-}
-
-function sumRows(rows){
-  return rows.reduce((a,r)=>({
-    ssaKwh:a.ssaKwh+r.ssaKwh,ssdKwh:a.ssdKwh+r.ssdKwh,totalKwh:a.totalKwh+r.totalKwh,
-    solarKwh:a.solarKwh+r.solarKwh,eksportKwh:a.eksportKwh+r.eksportKwh,
-    eksportRm:a.eksportRm+r.eksportRm,penjimatan:a.penjimatan+r.penjimatan,
-    ssaRm:a.ssaRm+r.ssaRm,ssdRm:a.ssdRm+r.ssdRm,totalRm:a.totalRm+r.totalRm
-  }),{ssaKwh:0,ssdKwh:0,totalKwh:0,solarKwh:0,eksportKwh:0,eksportRm:0,penjimatan:0,ssaRm:0,ssdRm:0,totalRm:0});
-}
-
-function renderShell(){
-  document.getElementById('main-content').innerHTML=`
-    <div class="metrics" id="metrics-grid"></div>
-    <div class="charts">
-      <div class="chart-box">
-        <div class="chart-title">Penggunaan Tenaga (kWh)</div>
-        <div class="chart-sub">SS-A Kampus · SS-D HPUSM · Solar</div>
-        <div class="legend">
-          <span><span class="leg-dot" style="background:#1a5fa8"></span>SS-A</span>
-          <span><span class="leg-dot" style="background:#1e7e34"></span>SS-D</span>
-          <span><span class="leg-dot" style="background:#e8a020"></span>Solar</span>
-        </div>
-        <div style="position:relative;width:100%;height:220px"><canvas id="chartKwh"></canvas></div>
-      </div>
-      <div class="chart-box">
-        <div class="chart-title">Bil & Penjimatan (RM)</div>
-        <div class="chart-sub">SS-A · SS-D · Eksport · Penjimatan</div>
-        <div class="legend">
-          <span><span class="leg-dot" style="background:#1a5fa8"></span>SS-A</span>
-          <span><span class="leg-dot" style="background:#1e7e34"></span>SS-D</span>
-          <span><span class="leg-dot" style="background:#0891b2"></span>Eksport</span>
-          <span><span class="leg-dot" style="background:#7c3aed"></span>Penjimatan</span>
-        </div>
-        <div style="position:relative;width:100%;height:220px"><canvas id="chartBil"></canvas></div>
+    <div class="settings-section">
+      <div class="settings-title"><i class="ti ti-brand-google"></i>Konfigurasi Google Sheets</div>
+      <div class="settings-row"><label>Sheet ID</label><input type="text" id="s-sheetid" value="1oPbeDl3kw_0Wo2QMLj_uspYuIi1U8FVgLWzPueZJ4mQ"></div>
+      <div class="settings-row"><label>GID Tab DV3</label><input type="text" id="s-gid-dv3" value="2136024607"></div>
+      <div class="settings-row"><label>GID Tab PPM</label><input type="text" id="s-gid-ppm" value="1093378707"></div>
+      <div class="settings-row"><label>GID Tab Kontraktor</label><input type="text" id="s-gid-kt" value="0"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <button class="btn btn-primary" onclick="saveSheetConfig()"><i class="ti ti-device-floppy"></i> Simpan & Refresh</button>
+        <button class="btn" onclick="testConn()"><i class="ti ti-wifi"></i> Test Sambungan</button>
       </div>
     </div>
-    <div class="trend-box">
-      <div class="chart-title">Trend Bulanan — Total kWh & Total Bil (RM)</div>
-      <div class="chart-sub" id="trend-sub"></div>
-      <div style="position:relative;width:100%;height:200px"><canvas id="chartTrend"></canvas></div>
-    </div>
-    <div class="sec-title"><i class="ti ti-heartbeat"></i> Kesihatan Sistem</div>
-    <div class="health-row" id="health-row"></div>
-    <div id="yoy-section"></div>`;
-  buildYoY();
-  updateDisplay();
-}
 
-function updateDisplay(){
-  if(!document.getElementById('metrics-grid'))return;
-  const filtered=getFiltered();
-  if(!filtered.length){
-    document.getElementById('metrics-grid').innerHTML='<div class="empty-state" style="grid-column:1/-1"><i class="ti ti-filter-off" style="font-size:30px;display:block;margin-bottom:10px"></i>Tiada data untuk pilihan ini</div>';
-    return;
-  }
-  const d=sumRows(filtered);
-  const solarPct=d.totalKwh>0?((d.solarKwh/d.totalKwh)*100).toFixed(1):'0.0';
-  const label=filtered.length===1?(filtered[0].bulan+' '+filtered[0].tahun):filtered.length+' rekod';
+    <div class="settings-section">
+      <div class="settings-title"><i class="ti ti-code"></i>Apps Script – Untuk Tulis Balik ke Sheets</div>
 
-  // ── 10 METRIC CARDS ──
-  document.getElementById('metrics-grid').innerHTML=`
-    <div class="card kampus"><div class="card-icon"><i class="ti ti-building"></i></div><div class="card-label">SS-A kWh (Kampus)</div><div class="card-value">${fmt(d.ssaKwh)}</div><div class="card-unit">kWh</div></div>
-    <div class="card hospital"><div class="card-icon"><i class="ti ti-building-hospital"></i></div><div class="card-label">SS-D kWh (HPUSM)</div><div class="card-value">${fmt(d.ssdKwh)}</div><div class="card-unit">kWh</div></div>
-    <div class="card solar-c"><div class="card-icon"><i class="ti ti-solar-panel"></i></div><div class="card-label">Janaan Solar</div><div class="card-value">${fmt(d.solarKwh)}</div><div class="card-unit">kWh · ${solarPct}%</div></div>
-    <div class="card total"><div class="card-icon"><i class="ti ti-plug"></i></div><div class="card-label">Jumlah kWh</div><div class="card-value">${fmt(d.totalKwh)}</div><div class="card-unit">${label}</div></div>
-    <div class="card kampus"><div class="card-icon"><i class="ti ti-receipt"></i></div><div class="card-label">Bil SS-A (Kampus)</div><div class="card-value">${fmtRM(d.ssaRm)}</div><div class="card-unit">Ringgit</div></div>
-    <div class="card hospital"><div class="card-icon"><i class="ti ti-receipt"></i></div><div class="card-label">Bil SS-D (HPUSM)</div><div class="card-value">${fmtRM(d.ssdRm)}</div><div class="card-unit">Ringgit</div></div>
-    <div class="card eksport-rm"><div class="card-icon"><i class="ti ti-arrow-up-right"></i></div><div class="card-label">Amaun Eksport (RM)</div><div class="card-value">${fmtRM(d.eksportRm)}</div><div class="card-unit">Hasil jualan solar</div></div>
-    <div class="card jimat"><div class="card-icon"><i class="ti ti-piggy-bank"></i></div><div class="card-label">Penjimatan Sebenar USM</div><div class="card-value">${fmtRM(d.penjimatan)}</div><div class="card-unit">Penjimatan bersih</div></div>
-    <div class="card solar-c"><div class="card-icon"><i class="ti ti-bolt"></i></div><div class="card-label">Tenaga Eksport kWh</div><div class="card-value">${fmt(d.eksportKwh)}</div><div class="card-unit">kWh dieksport</div></div>
-    <div class="card total"><div class="card-icon"><i class="ti ti-cash"></i></div><div class="card-label">Jumlah Bil</div><div class="card-value">${fmtRM(d.totalRm)}</div><div class="card-unit">${label}</div></div>`;
-
-  renderCharts(filtered,d);
-  renderHealth(d);
-  if(window._refreshYoYDropdowns) window._refreshYoYDropdowns();
-}
-
-// ── SS FILTER STATE ──
-let showSSA=true, showSSD=true;
-function toggleSS(which){
-  if(which==='ssa'){
-    showSSA=!showSSA;
-    const b=document.getElementById('tog-ssa');
-    b.classList.toggle('active',showSSA);
-    b.classList.toggle('ssa',showSSA);
-  } else {
-    showSSD=!showSSD;
-    const b=document.getElementById('tog-ssd');
-    b.classList.toggle('active',showSSD);
-    b.classList.toggle('ssd',showSSD);
-  }
-  // must keep at least one
-  if(!showSSA&&!showSSD){showSSA=true;const b=document.getElementById('tog-ssa');b.classList.add('active','ssa');}
-  updateDisplay();
-}
-// init toggle colours on load
-document.getElementById('tog-ssa').classList.add('ssa');
-document.getElementById('tog-ssd').classList.add('ssd');
-
-// ── DATALABEL HELPERS ──
-Chart.register(ChartDataLabels);
-function fmtDL(v,isRM){
-  if(!v||v===0) return '';
-  if(v>=1e6) return (isRM?'RM ':'')+( v/1e6).toFixed(2)+'M';
-  if(v>=1e3) return (isRM?'RM ':'')+( v/1e3).toFixed(1)+'k';
-  return (isRM?'RM ':'')+Math.round(v).toLocaleString();
-}
-// bar chart data labels — vertical, outside end of bar
-function dlBar(isRM){
-  return {
-    display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
-    formatter: (v) => fmtDL(v, isRM),
-    color:'#333', font:{size:9,weight:'700'},
-    anchor:'end', align:'end', offset:4,
-    rotation:-90,
-    clip:false
-  };
-}
-// line chart data labels — vertical outside point
-function dlLine(isRM){
-  return {
-    display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
-    formatter: (v) => fmtDL(v, isRM),
-    color: ctx => ctx.dataset.borderColor,
-    font:{size:9,weight:'700'},
-    anchor:'end', align:'end', offset:4,
-    rotation:-90,
-    clip:false
-  };
-}
-
-function renderCharts(filtered,d){
-  const sorted=[...filtered].sort((a,b)=>{const yi=r=>parseInt(r.tahun)||0,bi=r=>BULAN_ORDER.indexOf(r.bulan);return yi(a)!==yi(b)?yi(a)-yi(b):bi(a)-bi(b);});
-  const multi=sorted.length>1;
-  const lbl=multi?sorted.map(r=>{const dup=sorted.filter(x=>x.bulan===r.bulan).length>1;return r.bulan.substring(0,3)+(dup?' '+r.tahun.slice(-2):'');}):null;
-  if(chartKwh)chartKwh.destroy();if(chartBil)chartBil.destroy();if(chartTrend)chartTrend.destroy();
-
-  const tck={color:'#999',font:{size:10}};
-  // hide datalabels when many bars (>12) to avoid clutter
-  const hideDL = multi && sorted.length > 12;
-
-  const baseOpts=(isRM)=>({
-    responsive:true, maintainAspectRatio:false,
-    layout:{padding:{top:55, right:8}},
-    plugins:{
-      legend:{display:false},
-      datalabels: hideDL ? {display:false} : dlBar(isRM)
-    },
-    scales:{
-      x:{ticks:{...tck,autoSkip:false,maxRotation:45},grid:{display:false}},
-      y:{ticks:{...tck,callback:v=>isRM?('RM '+(v>=1e6?(v/1e6).toFixed(1)+'M':v.toLocaleString())):(v>=1e6?(v/1e6).toFixed(1)+'M':v.toLocaleString())},grid:{color:'rgba(0,0,0,0.05)'}}
-    }
-  });
-
-  if(multi){
-    // ── kWh chart — respect SS filter ──
-    const kwhDatasets=[];
-    if(showSSA) kwhDatasets.push({label:'SS-A',data:sorted.map(r=>r.ssaKwh),backgroundColor:'rgba(26,95,168,.85)',borderRadius:3,borderSkipped:false});
-    if(showSSD) kwhDatasets.push({label:'SS-D',data:sorted.map(r=>r.ssdKwh),backgroundColor:'rgba(30,126,52,.85)',borderRadius:3,borderSkipped:false});
-    kwhDatasets.push({label:'Solar',data:sorted.map(r=>r.solarKwh),backgroundColor:'rgba(232,160,32,.85)',borderRadius:3,borderSkipped:false});
-    chartKwh=new Chart(document.getElementById('chartKwh'),{type:'bar',data:{labels:lbl,datasets:kwhDatasets},options:baseOpts(false)});
-
-    // ── Bil chart — respect SS filter ──
-    const bilDatasets=[];
-    if(showSSA) bilDatasets.push({label:'SS-A',data:sorted.map(r=>r.ssaRm),backgroundColor:'rgba(26,95,168,.85)',borderRadius:3,borderSkipped:false});
-    if(showSSD) bilDatasets.push({label:'SS-D',data:sorted.map(r=>r.ssdRm),backgroundColor:'rgba(30,126,52,.85)',borderRadius:3,borderSkipped:false});
-    bilDatasets.push({label:'Eksport',data:sorted.map(r=>r.eksportRm),backgroundColor:'rgba(8,145,178,.85)',borderRadius:3,borderSkipped:false});
-    bilDatasets.push({label:'Penjimatan',data:sorted.map(r=>r.penjimatan),backgroundColor:'rgba(124,58,237,.85)',borderRadius:3,borderSkipped:false});
-    chartBil=new Chart(document.getElementById('chartBil'),{type:'bar',data:{labels:lbl,datasets:bilDatasets},options:baseOpts(true)});
-
-    // ── Trend line — Total kWh & Total RM ──
-    document.getElementById('trend-sub').textContent=sorted[0].bulan+' '+sorted[0].tahun+' — '+sorted[sorted.length-1].bulan+' '+sorted[sorted.length-1].tahun;
-    const trendDLshow = !hideDL;
-    const dlTrendKwh = trendDLshow ? {
-      display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
-      formatter: v => fmtDL(v, false),
-      color:'#1a5fa8', font:{size:9,weight:'700'},
-      anchor:'end', align:'top', offset:4, rotation:0, clip:false
-    } : {display:false};
-    const dlTrendRM = trendDLshow ? {
-      display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
-      formatter: v => fmtDL(v, true),
-      color:'#c47800', font:{size:9,weight:'700'},
-      anchor:'end', align:'bottom', offset:4, rotation:0, clip:false
-    } : {display:false};
-    chartTrend=new Chart(document.getElementById('chartTrend'),{type:'line',
-      data:{labels:lbl,datasets:[
-        {label:'Total kWh',data:sorted.map(r=>r.totalKwh),borderColor:'#1a5fa8',backgroundColor:'rgba(26,95,168,.07)',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#1a5fa8',borderWidth:2,yAxisID:'y',datalabels:dlTrendKwh},
-        {label:'Total RM',data:sorted.map(r=>r.totalRm),borderColor:'#e8a020',backgroundColor:'rgba(232,160,32,.07)',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#e8a020',borderWidth:2,borderDash:[5,4],yAxisID:'y2',datalabels:dlTrendRM}
-      ]},
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        layout:{padding:{top:28,bottom:24}},
-        interaction:{mode:'index',intersect:false},
-        plugins:{
-          legend:{display:true,labels:{font:{size:11},boxWidth:12,usePointStyle:true}},
-          datalabels:{} // controlled per-dataset
-        },
-        scales:{
-          x:{ticks:{...tck,autoSkip:true,maxTicksLimit:18,maxRotation:45},grid:{display:false}},
-          y:{ticks:{...tck,callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v.toLocaleString()},grid:{color:'rgba(0,0,0,0.05)'},position:'left'},
-          y2:{ticks:{...tck,callback:v=>'RM '+(v>=1e6?(v/1e6).toFixed(1)+'M':v.toLocaleString())},grid:{display:false},position:'right'}
-        }
-      }
-    });
-  } else {
-    // ── Single month / single bar ──
-    const kwhLbls=[],kwhVals=[],kwhClr=[];
-    if(showSSA){kwhLbls.push('SS-A (Kampus)');kwhVals.push(d.ssaKwh);kwhClr.push('#1a5fa8');}
-    if(showSSD){kwhLbls.push('SS-D (HPUSM)');kwhVals.push(d.ssdKwh);kwhClr.push('#1e7e34');}
-    kwhLbls.push('Solar');kwhVals.push(d.solarKwh);kwhClr.push('#e8a020');
-
-    const bilLbls=[],bilVals=[],bilClr=[];
-    if(showSSA){bilLbls.push('Bil SS-A');bilVals.push(d.ssaRm);bilClr.push('#1a5fa8');}
-    if(showSSD){bilLbls.push('Bil SS-D');bilVals.push(d.ssdRm);bilClr.push('#1e7e34');}
-    bilLbls.push('Eksport (RM)','Penjimatan');bilVals.push(d.eksportRm,d.penjimatan);bilClr.push('#0891b2','#7c3aed');
-
-    chartKwh=new Chart(document.getElementById('chartKwh'),{type:'bar',data:{labels:kwhLbls,datasets:[{data:kwhVals,backgroundColor:kwhClr,borderRadius:6,borderSkipped:false}]},options:baseOpts(false)});
-    chartBil=new Chart(document.getElementById('chartBil'),{type:'bar',data:{labels:bilLbls,datasets:[{data:bilVals,backgroundColor:bilClr,borderRadius:6,borderSkipped:false}]},options:baseOpts(true)});
-
-    document.getElementById('trend-sub').textContent='Pilih lebih dari 1 bulan untuk paparan trend';
-    chartTrend=new Chart(document.getElementById('chartTrend'),{type:'bar',
-      data:{labels:['kWh Total','Bil Total','Eksport RM','Penjimatan'],
-        datasets:[{data:[d.totalKwh,d.totalRm,d.eksportRm,d.penjimatan],backgroundColor:['#1a5fa8','#1e7e34','#0891b2','#7c3aed'],borderRadius:6}]},
-      options:baseOpts(false)});
-  }
-}
-
-function renderHealth(d){
-  const lSSA=Math.min(Math.round((d.ssaKwh/(d.ssaKwh+d.ssdKwh||1))*100),100),lSSD=100-lSSA;
-  const sSSA=lSSA>70?'warn':'ok',sSSD=lSSD>70?'warn':'ok';
-  document.getElementById('health-row').innerHTML=`
-    <div class="hcard">
-      <div class="hhead"><div class="hname"><i class="ti ti-building" style="color:#1a5fa8"></i> SS-A (Kampus)</div><span class="badge b-${sSSA}">${sSSA==='ok'?'NORMAL':'PERHATIAN'}</span></div>
-      <div class="hstat">Nisbah beban<span>${lSSA}%</span></div>
-      <div class="hstat">Jumlah kWh<span>${fmt(d.ssaKwh)}</span></div>
-      <div class="hstat">Jumlah Bil<span>${fmtRM(d.ssaRm)}</span></div>
-      <div class="bar-bg"><div class="bar-fill" style="width:${lSSA}%;background:${sSSA==='ok'?'#1e7e34':'#e8a020'}"></div></div>
-    </div>
-    <div class="hcard">
-      <div class="hhead"><div class="hname"><i class="ti ti-building-hospital" style="color:#1e7e34"></i> SS-D (HPUSM)</div><span class="badge b-${sSSD}">${sSSD==='ok'?'NORMAL':'PERHATIAN'}</span></div>
-      <div class="hstat">Nisbah beban<span>${lSSD}%</span></div>
-      <div class="hstat">Jumlah kWh<span>${fmt(d.ssdKwh)}</span></div>
-      <div class="hstat">Jumlah Bil<span>${fmtRM(d.ssdRm)}</span></div>
-      <div class="bar-bg"><div class="bar-fill" style="width:${lSSD}%;background:${sSSD==='ok'?'#1e7e34':'#e8a020'}"></div></div>
-    </div>
-    <div class="hcard">
-      <div class="hhead"><div class="hname"><i class="ti ti-solar-panel" style="color:#e8a020"></i> Solar & Penjimatan</div><span class="badge b-ok">${d.solarKwh>0?'AKTIF':'TIADA DATA'}</span></div>
-      <div class="hstat">Janaan Solar<span>${fmt(d.solarKwh)} kWh</span></div>
-      <div class="hstat">Eksport kWh<span>${fmt(d.eksportKwh)} kWh</span></div>
-      <div class="hstat">Amaun Eksport<span>${fmtRM(d.eksportRm)}</span></div>
-      <div class="hstat">Penjimatan USM<span style="color:#7c3aed">${fmtRM(d.penjimatan)}</span></div>
-      <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(d.totalKwh>0?(d.solarKwh/d.totalKwh)*500:0,100)}%;background:#e8a020"></div></div>
-    </div>`;
-}
-
-// ══════════════════════════════════════════════
-// YoY SECTION
-// ══════════════════════════════════════════════
-let rangeStart=0,rangeEnd=11,yoySelecting=false,yoyKwhChart,yoyBilChart;
-
-function buildYoY(){
-  const el=document.getElementById('yoy-section');
-  if(!el)return;
-  const pillsHTML=BULAN_SHORT.map((b,i)=>`<span class="mpill" data-idx="${i}" id="mpill-${i}">${b}</span>`).join('');
-  el.innerHTML=`
-    <div class="yoy-title" style="margin-top:8px"><i class="ti ti-chart-arrows-vertical" style="color:#1a3a5c"></i> Analisis Perbandingan Tahun (YoY)</div>
-    <div class="yoy-top">
-      <label>Tahun Semasa:</label><select id="yoy-curr"></select>
-      <label style="margin-left:6px">Berbanding:</label><select id="yoy-prev"></select>
-    </div>
-    <div class="range-box">
-      <div class="range-box-title"><i class="ti ti-calendar-stats" style="color:#1a3a5c"></i> Pilih Julat Bulan — Klik mula, klik akhir</div>
-      <div class="month-pills" id="month-pills">${pillsHTML}</div>
-      <div class="range-info">Skop: <strong id="range-label">Januari — Disember (12 bulan)</strong>
-        <button class="range-reset" onclick="resetYoyRange()"><i class="ti ti-refresh"></i> Reset</button>
+      <div class="alert alert-warn" style="margin-bottom:14px">
+        ⚠️ <b>Punca utama "Failed to Fetch"</b> — Apps Script perlu dikonfigurasi dengan betul untuk terima request dari luar. Guna kod baru di bawah yang menyelesaikan isu CORS.
       </div>
-    </div>
-    <div id="yoy-content"></div>`;
-  document.getElementById('yoy-curr').addEventListener('change',renderYoY);
-  document.getElementById('yoy-prev').addEventListener('change',renderYoY);
-  document.getElementById('month-pills').addEventListener('click',e=>{
-    const pill=e.target.closest('.mpill');if(!pill)return;
-    const idx=parseInt(pill.dataset.idx);
-    if(!yoySelecting){rangeStart=idx;rangeEnd=idx;yoySelecting=true;}
-    else{if(idx<rangeStart)rangeStart=idx;else rangeEnd=idx;yoySelecting=false;}
-    updateYoyPills();renderYoY();
-  });
-  updateYoyPills();
-}
 
-window.resetYoyRange=function(){rangeStart=0;rangeEnd=11;yoySelecting=false;updateYoyPills();renderYoY();};
+      <ol class="steps">
+        <li>Buka Google Sheets anda → klik menu <b>Extensions → Apps Script</b></li>
+        <li><b>Padam semua</b> kod sedia ada dalam editor</li>
+        <li>Tampal kod baru di bawah, kemudian klik <b>💾 Save</b></li>
+        <li>Klik <b>Deploy → New deployment</b> (atau <b>Manage deployments → Edit</b> jika sudah ada)</li>
+        <li>Pastikan: <b>Type: Web app</b> | <b>Execute as: Me</b> | <b>Who has access: Anyone</b></li>
+        <li>Klik <b>Deploy</b> → Copy URL yang diberikan</li>
+        <li>Tampal URL di bawah dan klik <b>Simpan & Test</b></li>
+      </ol>
 
-function updateYoyPills(){
-  const s=Math.min(rangeStart,rangeEnd),e=Math.max(rangeStart,rangeEnd);
-  BULAN_SHORT.forEach((_,i)=>{
-    const p=document.getElementById('mpill-'+i);if(!p)return;
-    p.className='mpill';
-    if(i===s)p.classList.add('range-start');
-    if(i===e&&e!==s)p.classList.add('range-end');
-    if(i>s&&i<e)p.classList.add('in-range');
-  });
-  const lb=document.getElementById('range-label');
-  if(lb){const s2=Math.min(rangeStart,rangeEnd),e2=Math.max(rangeStart,rangeEnd);lb.textContent=s2===e2?BULAN_ORDER[s2]+' sahaja':BULAN_ORDER[s2]+' — '+BULAN_ORDER[e2]+' ('+(e2-s2+1)+' bulan)';}
-}
+      <div style="position:relative;margin:14px 0 6px">
+        <div class="code-block" id="script-code">// ═══════════════════════════════════════════════════════
+// APPS SCRIPT v2 – Dashboard Kejuruteraan Elektrik
+// Salin KESELURUHAN kod ini ke Apps Script
+// ═══════════════════════════════════════════════════════
 
-window._refreshYoYDropdowns=function(){
-  const years=[...new Set(allRows.map(r=>r.tahun).filter(Boolean))].sort((a,b)=>b-a);
-  const curr=document.getElementById('yoy-curr'),prev=document.getElementById('yoy-prev');
-  if(!curr||!prev)return;
-  const oldC=curr.value,oldP=prev.value;
-  curr.innerHTML='';prev.innerHTML='';
-  years.forEach((y,i)=>{
-    const oc=document.createElement('option');oc.textContent=y;oc.value=y;if(y===oldC||(oldC===''&&i===0))oc.selected=true;curr.appendChild(oc);
-    const op=document.createElement('option');op.textContent=y;op.value=y;if(y===oldP||(oldP===''&&i===1))op.selected=true;prev.appendChild(op);
-  });
-  renderYoY();
+const SPREADSHEET_ID = '1oPbeDl3kw_0Wo2QMLj_uspYuIi1U8FVgLWzPueZJ4mQ';
+
+// ─── Nama tab dalam Google Sheets ──────────────────────
+// PENTING: key mesti sama dengan nilai 'tab' yang dihantar dari dashboard
+const SHEET_NAMES = {
+  dv3:         'DV3',         // tab bernama DV3 dalam Sheets
+  ppm:         'PPM',         // tab bernama PPM dalam Sheets
+  kontraktor:  'KONTRAKTOR'   // tab bernama KONTRAKTOR dalam Sheets
 };
 
-function getRowsInRange(year){
-  const s=Math.min(rangeStart,rangeEnd),e=Math.max(rangeStart,rangeEnd);
-  return allRows.filter(r=>r.tahun===year&&BULAN_ORDER.indexOf(r.bulan)>=s&&BULAN_ORDER.indexOf(r.bulan)<=e);
-}
-
-function sumR(rows){return rows.reduce((a,r)=>({ssaKwh:a.ssaKwh+r.ssaKwh,ssdKwh:a.ssdKwh+r.ssdKwh,totalKwh:a.totalKwh+r.totalKwh,solarKwh:a.solarKwh+r.solarKwh,eksportKwh:a.eksportKwh+r.eksportKwh,eksportRm:a.eksportRm+r.eksportRm,penjimatan:a.penjimatan+r.penjimatan,ssaRm:a.ssaRm+r.ssaRm,ssdRm:a.ssdRm+r.ssdRm,totalRm:a.totalRm+r.totalRm}),{ssaKwh:0,ssdKwh:0,totalKwh:0,solarKwh:0,eksportKwh:0,eksportRm:0,penjimatan:0,ssaRm:0,ssdRm:0,totalRm:0});}
-function fmtN(n){return Math.round(n).toLocaleString('ms-MY')}
-function fmtRM2(n){return 'RM '+Math.round(n).toLocaleString('ms-MY')}
-function delta(c,p){if(!p)return{pct:'—',cls:'flat',arrow:'→'};const pct=(c-p)/p*100;return{pct:(pct>=0?'+':'')+pct.toFixed(1)+'%',cls:pct>0.05?'up':pct<-0.05?'down':'flat',arrow:pct>0.05?'↑':pct<-0.05?'↓':'→'};}
-
-function renderYoY(){
-  const currY=document.getElementById('yoy-curr')?.value;
-  const prevY=document.getElementById('yoy-prev')?.value;
-  const el=document.getElementById('yoy-content');
-  if(!el||!currY||!prevY)return;
-  const s=Math.min(rangeStart,rangeEnd),e=Math.max(rangeStart,rangeEnd);
-  const bulanDlm=BULAN_ORDER.slice(s,e+1),shortDlm=BULAN_SHORT.slice(s,e+1);
-  const currRows=getRowsInRange(currY),prevRows=getRowsInRange(prevY);
-  if(!currRows.length&&!prevRows.length){el.innerHTML='<div class="yoy-no-data"><i class="ti ti-database-off" style="font-size:28px;display:block;margin-bottom:8px"></i>Tiada data untuk pilihan ini</div>';return;}
-  const c=sumR(currRows),p=sumR(prevRows);
-  const rangeStr=s===e?BULAN_ORDER[s]:BULAN_ORDER[s]+' – '+BULAN_ORDER[e];
-  const dK=delta(c.totalKwh,p.totalKwh),dB=delta(c.totalRm,p.totalRm);
-  const dSSAk=delta(c.ssaKwh,p.ssaKwh),dSSDk=delta(c.ssdKwh,p.ssdKwh);
-  const dSSAr=delta(c.ssaRm,p.ssaRm),dSSDr=delta(c.ssdRm,p.ssdRm);
-  const dSol=delta(c.solarKwh,p.solarKwh),dExp=delta(c.eksportRm,p.eksportRm),dJim=delta(c.penjimatan,p.penjimatan);
-
-  let html=`<div class="yoy-summary">
-    <div class="yoy-card kwh-card">
-      <div class="yoy-card-label"><i class="ti ti-plug"></i> Jumlah kWh</div>
-      <div class="yoy-row"><span class="yoy-year-label">${currY}</span><span class="yoy-val">${fmtN(c.totalKwh)}</span></div>
-      <div class="yoy-row"><span class="yoy-year-label">${prevY}</span><span class="yoy-val" style="font-size:12px;color:#aaa">${fmtN(p.totalKwh)}</span></div>
-      <hr class="yoy-divider"><div class="yoy-delta ${dK.cls}">${dK.arrow} ${dK.pct}</div>
-    </div>
-    <div class="yoy-card bil-card">
-      <div class="yoy-card-label"><i class="ti ti-cash"></i> Jumlah Bil (RM)</div>
-      <div class="yoy-row"><span class="yoy-year-label">${currY}</span><span class="yoy-val">${fmtRM2(c.totalRm)}</span></div>
-      <div class="yoy-row"><span class="yoy-year-label">${prevY}</span><span class="yoy-val" style="font-size:12px;color:#aaa">${fmtRM2(p.totalRm)}</span></div>
-      <hr class="yoy-divider"><div class="yoy-delta ${dB.cls}">${dB.arrow} ${dB.pct}</div>
-    </div>
-    <div class="yoy-card kwh-card">
-      <div class="yoy-card-label"><i class="ti ti-building"></i> SS-A kWh</div>
-      <div class="yoy-row"><span class="yoy-year-label">${currY}</span><span class="yoy-val" style="color:#1a5fa8">${fmtN(c.ssaKwh)}</span></div>
-      <div class="yoy-row"><span class="yoy-year-label">${prevY}</span><span class="yoy-val" style="font-size:12px;color:#aaa">${fmtN(p.ssaKwh)}</span></div>
-      <hr class="yoy-divider"><div class="yoy-delta ${dSSAk.cls}">${dSSAk.arrow} ${dSSAk.pct}</div>
-    </div>
-    <div class="yoy-card kwh-card">
-      <div class="yoy-card-label"><i class="ti ti-building-hospital"></i> SS-D kWh</div>
-      <div class="yoy-row"><span class="yoy-year-label">${currY}</span><span class="yoy-val" style="color:#1e7e34">${fmtN(c.ssdKwh)}</span></div>
-      <div class="yoy-row"><span class="yoy-year-label">${prevY}</span><span class="yoy-val" style="font-size:12px;color:#aaa">${fmtN(p.ssdKwh)}</span></div>
-      <hr class="yoy-divider"><div class="yoy-delta ${dSSDk.cls}">${dSSDk.arrow} ${dSSDk.pct}</div>
-    </div>
-    <div class="yoy-card solar-card">
-      <div class="yoy-card-label"><i class="ti ti-solar-panel"></i> Janaan Solar</div>
-      <div class="yoy-row"><span class="yoy-year-label">${currY}</span><span class="yoy-val" style="color:#c47800">${fmtN(c.solarKwh)}</span></div>
-      <div class="yoy-row"><span class="yoy-year-label">${prevY}</span><span class="yoy-val" style="font-size:12px;color:#aaa">${fmtN(p.solarKwh)}</span></div>
-      <hr class="yoy-divider"><div class="yoy-delta ${dSol.cls}">${dSol.arrow} ${dSol.pct}</div>
-    </div>
-    <div class="yoy-card" style="border-top:3px solid #0891b2">
-      <div class="yoy-card-label" style="color:#0891b2"><i class="ti ti-arrow-up-right"></i> Amaun Eksport (RM)</div>
-      <div class="yoy-row"><span class="yoy-year-label">${currY}</span><span class="yoy-val" style="color:#0891b2">${fmtRM2(c.eksportRm)}</span></div>
-      <div class="yoy-row"><span class="yoy-year-label">${prevY}</span><span class="yoy-val" style="font-size:12px;color:#aaa">${fmtRM2(p.eksportRm)}</span></div>
-      <hr class="yoy-divider"><div class="yoy-delta ${dExp.cls}">${dExp.arrow} ${dExp.pct}</div>
-    </div>
-    <div class="yoy-card jimat-card">
-      <div class="yoy-card-label" style="color:#7c3aed"><i class="ti ti-piggy-bank"></i> Penjimatan USM (RM)</div>
-      <div class="yoy-row"><span class="yoy-year-label">${currY}</span><span class="yoy-val" style="color:#7c3aed">${fmtRM2(c.penjimatan)}</span></div>
-      <div class="yoy-row"><span class="yoy-year-label">${prevY}</span><span class="yoy-val" style="font-size:12px;color:#aaa">${fmtRM2(p.penjimatan)}</span></div>
-      <hr class="yoy-divider"><div class="yoy-delta ${dJim.cls}">${dJim.arrow} ${dJim.pct}</div>
-    </div>
-    <div class="yoy-card bil-card">
-      <div class="yoy-card-label"><i class="ti ti-receipt"></i> Bil SS-A vs SS-D</div>
-      <div class="yoy-row"><span class="yoy-year-label">SS-A ${currY}</span><span class="yoy-val" style="font-size:12px;color:#1a5fa8">${fmtRM2(c.ssaRm)}</span></div>
-      <div class="yoy-row"><span class="yoy-year-label">SS-D ${currY}</span><span class="yoy-val" style="font-size:12px;color:#1e7e34">${fmtRM2(c.ssdRm)}</span></div>
-      <hr class="yoy-divider">
-      <div class="yoy-delta" style="font-size:11px;gap:6px">
-        <span class="${dSSAr.cls}">A ${dSSAr.arrow}${dSSAr.pct}</span>
-        <span class="${dSSDr.cls}">D ${dSSDr.arrow}${dSSDr.pct}</span>
-      </div>
-    </div>
-  </div>`;
-
-  // charts
-  const getCurr=b=>currRows.find(r=>r.bulan===b);
-  const getPrev=b=>prevRows.find(r=>r.bulan===b);
-  html+=`<div class="yoy-charts">
-    <div class="yoy-chart-box">
-      <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:3px">kWh — ${rangeStr}</div>
-      <div style="font-size:11px;color:#aaa;margin-bottom:8px">${currY} vs ${prevY}</div>
-      <div class="legend" style="margin-bottom:8px">
-        <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#1a5fa8;margin-right:4px"></span>${currY}</span>
-        <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#a0bdd8;margin-right:4px"></span>${prevY}</span>
-      </div>
-      <div style="position:relative;width:100%;height:200px"><canvas id="yoy-kwh-chart"></canvas></div>
-    </div>
-    <div class="yoy-chart-box">
-      <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:3px">Penjimatan & Eksport (RM) — ${rangeStr}</div>
-      <div style="font-size:11px;color:#aaa;margin-bottom:8px">${currY} vs ${prevY}</div>
-      <div class="legend" style="margin-bottom:8px">
-        <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#7c3aed;margin-right:4px"></span>Penjimatan ${currY}</span>
-        <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#c4b5fd;margin-right:4px"></span>Penjimatan ${prevY}</span>
-        <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#0891b2;margin-right:4px"></span>Eksport ${currY}</span>
-      </div>
-      <div style="position:relative;width:100%;height:200px"><canvas id="yoy-bil-chart"></canvas></div>
-    </div>
-  </div>`;
-
-  // table
-  html+=`<div class="yoy-table-box">
-    <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:12px">Jadual — ${rangeStr} | ${currY} vs ${prevY}</div>
-    <table class="yoy-table"><thead><tr>
-      <th>Bulan</th>
-      <th class="td-num">kWh ${currY}</th><th class="td-num">kWh ${prevY}</th><th class="td-num">Δ kWh</th>
-      <th class="td-num">Bil ${currY}</th><th class="td-num">Bil ${prevY}</th><th class="td-num">Δ Bil</th>
-      <th class="td-num">Eksport RM ${currY}</th><th class="td-num">Penjimatan ${currY}</th>
-    </tr></thead><tbody>`;
-  bulanDlm.forEach((b,i)=>{
-    const cr=getCurr(b),pr=getPrev(b);
-    const dKr=delta(cr?cr.totalKwh:0,pr?pr.totalKwh:0);
-    const dBr=delta(cr?cr.totalRm:0,pr?pr.totalRm:0);
-    html+=`<tr>
-      <td><strong>${shortDlm[i]}</strong></td>
-      <td class="td-num">${cr?fmtN(cr.totalKwh):'—'}</td>
-      <td class="td-num" style="color:#aaa">${pr?fmtN(pr.totalKwh):'—'}</td>
-      <td class="td-num td-${dKr.cls}">${(cr&&pr)?dKr.pct:'—'}</td>
-      <td class="td-num">${cr?fmtRM2(cr.totalRm):'—'}</td>
-      <td class="td-num" style="color:#aaa">${pr?fmtRM2(pr.totalRm):'—'}</td>
-      <td class="td-num td-${dBr.cls}">${(cr&&pr)?dBr.pct:'—'}</td>
-      <td class="td-num" style="color:#0891b2">${cr?fmtRM2(cr.eksportRm):'—'}</td>
-      <td class="td-num" style="color:#7c3aed">${cr?fmtRM2(cr.penjimatan):'—'}</td>
-    </tr>`;
-  });
-  const dKT=delta(c.totalKwh,p.totalKwh),dBT=delta(c.totalRm,p.totalRm);
-  html+=`<tr class="td-total">
-    <td><strong>JUMLAH</strong></td>
-    <td class="td-num">${fmtN(c.totalKwh)}</td><td class="td-num" style="color:#aaa">${fmtN(p.totalKwh)}</td>
-    <td class="td-num td-${dKT.cls}">${dKT.pct}</td>
-    <td class="td-num">${fmtRM2(c.totalRm)}</td><td class="td-num" style="color:#aaa">${fmtRM2(p.totalRm)}</td>
-    <td class="td-num td-${dBT.cls}">${dBT.pct}</td>
-    <td class="td-num" style="color:#0891b2">${fmtRM2(c.eksportRm)}</td>
-    <td class="td-num" style="color:#7c3aed">${fmtRM2(c.penjimatan)}</td>
-  </tr></tbody></table></div>`;
-
-  el.innerHTML=html;
-
-  if(yoyKwhChart)yoyKwhChart.destroy();
-  if(yoyBilChart)yoyBilChart.destroy();
-  const tck={color:'#999',font:{size:10}};
-  const yoyHideDL = shortDlm.length > 12;
-  const dlYoy=(isRM)=> yoyHideDL ? {display:false} : {
-    display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
-    formatter: v => fmtDL(v, isRM),
-    color:'#333', font:{size:9,weight:'700'},
-    anchor:'end', align:'end', offset:4, rotation:-90, clip:false
+// ─── CORS headers ──────────────────────────────────────
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin':  '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type':                 'application/json'
   };
-  const yoyBase=(isRM)=>({
-    responsive:true, maintainAspectRatio:false,
-    layout:{padding:{top:55,right:8}},
-    plugins:{legend:{display:false}, datalabels:dlYoy(isRM)},
-    scales:{
-      x:{ticks:{...tck,autoSkip:false,maxRotation:45},grid:{display:false}},
-      y:{ticks:{...tck,callback:v=>isRM?'RM '+(v>=1e6?(v/1e6).toFixed(1)+'M':v.toLocaleString()):(v>=1e6?(v/1e6).toFixed(1)+'M':v.toLocaleString())},grid:{color:'rgba(0,0,0,0.05)'}}
-    }
-  });
-  yoyKwhChart=new Chart(document.getElementById('yoy-kwh-chart'),{type:'bar',data:{labels:shortDlm,datasets:[
-    {label:currY,data:bulanDlm.map(b=>(getCurr(b)||{totalKwh:0}).totalKwh),backgroundColor:'rgba(26,95,168,.85)',borderRadius:3,borderSkipped:false},
-    {label:prevY,data:bulanDlm.map(b=>(getPrev(b)||{totalKwh:0}).totalKwh),backgroundColor:'rgba(160,189,216,.7)',borderRadius:3,borderSkipped:false}
-  ]},options:yoyBase(false)});
-  yoyBilChart=new Chart(document.getElementById('yoy-bil-chart'),{type:'bar',data:{labels:shortDlm,datasets:[
-    {label:'Penjimatan '+currY,data:bulanDlm.map(b=>(getCurr(b)||{penjimatan:0}).penjimatan),backgroundColor:'rgba(124,58,237,.85)',borderRadius:3,borderSkipped:false},
-    {label:'Penjimatan '+prevY,data:bulanDlm.map(b=>(getPrev(b)||{penjimatan:0}).penjimatan),backgroundColor:'rgba(196,181,253,.7)',borderRadius:3,borderSkipped:false},
-    {label:'Eksport RM '+currY,data:bulanDlm.map(b=>(getCurr(b)||{eksportRm:0}).eksportRm),backgroundColor:'rgba(8,145,178,.85)',borderRadius:3,borderSkipped:false}
-  ]},options:yoyBase(true)});
 }
 
-// ── INIT ──
-// Register datalabels plugin globally
+// ─── Entry point ───────────────────────────────────────
+function doGet(e) {
+  return handleRequest(e);
+}
+
+function doPost(e) {
+  return handleRequest(e);
+}
+
+function handleRequest(e) {
+  try {
+    const p      = e.parameter || {};
+    const action = p.action || '';
+    const tab    = p.tab    || '';
+
+    let result;
+    switch (action) {
+      case 'ping':
+        result = { status: 'ok', msg: 'Sambungan berjaya!', time: new Date().toISOString() };
+        break;
+      case 'read':
+        result = readSheet(tab);
+        break;
+      case 'append':
+        result = appendRow(tab, JSON.parse(p.row));
+        break;
+      case 'update':
+        result = updateRow(tab, parseInt(p.rowIndex), JSON.parse(p.row));
+        break;
+      case 'delete':
+        result = deleteRow(tab, parseInt(p.rowIndex));
+        break;
+      default:
+        result = { status: 'error', msg: 'Action tidak diketahui: ' + action };
+    }
+
+    return buildResponse(result);
+
+  } catch (err) {
+    return buildResponse({ status: 'error', msg: err.toString() });
+  }
+}
+
+function buildResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ─── BACA data dari sheet ──────────────────────────────
+function readSheet(tab) {
+  const name = SHEET_NAMES[tab];
+  if (!name) return { status: 'error', msg: 'Tab tidak dikenali: ' + tab };
+
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(name);
+  if (!sheet) return { status: 'error', msg: 'Sheet "' + name + '" tidak wujud' };
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < 2) return { status: 'ok', headers: [], data: [] };
+
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const rows    = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+  return { status: 'ok', headers: headers, data: rows, total: rows.length };
+}
+
+// ─── TAMBAH baris baru ─────────────────────────────────
+function appendRow(tab, row) {
+  const sheet = getSheet(tab);
+  if (!sheet) return { status: 'error', msg: 'Sheet tidak dijumpai' };
+  sheet.appendRow(row);
+  return { status: 'ok', msg: 'Baris berjaya ditambah', newRow: sheet.getLastRow() };
+}
+
+// ─── KEMASKINI baris ───────────────────────────────────
+function updateRow(tab, rowIndex, row) {
+  const sheet = getSheet(tab);
+  if (!sheet) return { status: 'error', msg: 'Sheet tidak dijumpai' };
+  if (rowIndex < 2) return { status: 'error', msg: 'rowIndex tidak sah' };
+  sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+  return { status: 'ok', msg: 'Baris ' + rowIndex + ' dikemas kini' };
+}
+
+// ─── PADAM baris ───────────────────────────────────────
+function deleteRow(tab, rowIndex) {
+  const sheet = getSheet(tab);
+  if (!sheet) return { status: 'error', msg: 'Sheet tidak dijumpai' };
+  if (rowIndex < 2) return { status: 'error', msg: 'rowIndex tidak sah' };
+  sheet.deleteRow(rowIndex);
+  return { status: 'ok', msg: 'Baris ' + rowIndex + ' dipadam' };
+}
+
+// ─── Helper ────────────────────────────────────────────
+function getSheet(tab) {
+  const name = SHEET_NAMES[tab];
+  if (!name) return null;
+  return SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(name);
+}
+</div>
+        <button class="btn" style="margin-top:8px" onclick="copyScript()"><i class="ti ti-copy"></i> Copy Semua Kod</button>
+      </div>
+
+      <div style="margin-top:16px;border-top:.5px solid var(--bdr);padding-top:16px">
+        <label style="font-size:13px;font-weight:600;color:var(--txt1);display:block;margin-bottom:8px">Apps Script URL (selepas deploy):</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="url" id="s-script-url" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;min-width:280px;font-size:13px;padding:7px 11px;border-radius:var(--r-md);border:.5px solid var(--bdr2);background:var(--bg2);color:var(--txt1);outline:none;">
+          <button class="btn btn-primary" onclick="saveScriptUrl()"><i class="ti ti-device-floppy"></i> Simpan & Test</button>
+        </div>
+        <div id="script-test-result" style="margin-top:8px;font-size:12px;color:var(--txt2)"></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title"><i class="ti ti-pencil"></i>Nama Sistem & Tab</div>
+      <div class="settings-row"><label>Nama Sistem</label><input type="text" id="s-sysname" value="Sistem Pemantauan Prestasi – Unit Kejuruteraan Elektrik"></div>
+      <div class="settings-row"><label>Nama Tab DV3</label><input type="text" id="s-dv3name" value="DV3"></div>
+      <div class="settings-row"><label>Nama Tab PPM</label><input type="text" id="s-ppmname" value="PPM"></div>
+      <div class="settings-row"><label>Nama Tab Kontraktor</label><input type="text" id="s-ktname" value="Kontraktor"></div>
+      <button class="btn btn-primary" onclick="saveSettings()"><i class="ti ti-device-floppy"></i> Simpan</button>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title"><i class="ti ti-sun"></i>Mode Paparan</div>
+      <div class="settings-row"><label>Tema</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="mode-light" onclick="setMode('light')"><i class="ti ti-sun"></i> Cerah</button>
+          <button class="toggle-btn" id="mode-dark" onclick="setMode('dark')"><i class="ti ti-moon"></i> Gelap</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /settings-wrap -->
+</div><!-- /tab-tetapan -->
+
+</div></div></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOut(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title"></div>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()"><i class="ti ti-x"></i> Batal</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveModal()"><i class="ti ti-device-floppy"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════
+let CFG = {
+  sheetId:   '1oPbeDl3kw_0Wo2QMLj_uspYuIi1U8FVgLWzPueZJ4mQ',
+  gids:      { dv3:'2136024607', ppm:'1093378707', kt:'0' },
+  scriptUrl: localStorage.getItem('scriptUrl') || ''
+};
+
+// Populate saved script URL if exists
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('scriptUrl');
+  if (saved) {
+    const el = document.getElementById('s-script-url');
+    if (el) el.value = saved;
+    CFG.scriptUrl = saved;
+  }
+});
+
+const BULAN_ORDER = ['Jan','Feb','Mac','April','Mei','Jun','Jul','Ogos','Sept','Okt','Nov','Dis'];
+
+// Dapatkan index bulan (0-based), -1 jika tidak jumpa
+function bulanIdx(b){ return BULAN_ORDER.indexOf(b); }
+
+// Semak sama ada bulan 'b' berada dalam julat [from..to]
+// Jika from atau to = '0' / '', tiada had
+function inRange(b, from, to){
+  if((!from||from==='0') && (!to||to==='0')) return true;
+  const bi = bulanIdx(b);
+  if(bi < 0) return true; // bulan tidak diketahui, tunjuk je
+  const fi = (!from||from==='0') ? 0 : bulanIdx(from);
+  const ti = (!to||to==='0') ? 11 : bulanIdx(to);
+  if(fi <= ti) return bi >= fi && bi <= ti;
+  return bi >= fi || bi <= ti; // wrap around (e.g. Okt → Mac)
+}
+
+// Label untuk range badge
+function rangeLabel(from, to){
+  if((!from||from==='0') && (!to||to==='0')) return 'Semua Bulan';
+  if(from===to) return from;
+  const f = (!from||from==='0') ? 'Jan' : from;
+  const t = (!to||to==='0') ? 'Dis' : to;
+  return f + ' → ' + t;
+}
+const PALETTE = ['#1a56db','#0e9f6e','#c27803','#e02424','#7e3af2','#0694a2','#f05252','#3f83f8','#31c48d','#ff5a1f'];
+const TAB_NAMES = { dv3:'dv3', ppm:'ppm', kontraktor:'kontraktor' };
+
+let dv3Data=[], ppmData=[], ktData=[];
+let lastSync = {};
+
+const gv = id => document.getElementById(id);
+const gc = () => document.documentElement.getAttribute('data-theme')==='dark'?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
+const tc = () => document.documentElement.getAttribute('data-theme')==='dark'?'#9ca3af':'#6b7280';
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2);
+const fmt = d => d ? d.toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'}) : '-';
+
+// ═══════════════════════════════════════════════════════
+// FETCH CSV – guna allorigins.win sebagai CORS proxy
+// ═══════════════════════════════════════════════════════
+// ─── parseNum: clean RM symbols, spaces, commas ──────────
+function parseNum(val) {
+  if (val === undefined || val === null || val === '') return 0;
+  // Remove RM, spaces, commas (e.g. "RM 1,234.56" or "1,234")
+  const cleaned = String(val).replace(/[Rr][Mm]|,|\s/g, '').trim();
+  return parseFloat(cleaned) || 0;
+}
+
+async function fetchCSV(gid) {
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${CFG.sheetId}/export?format=csv&gid=${gid}`;
+  // Guna beberapa proxy sebagai fallback
+  const proxies = [
+    `https://api.allorigins.win/get?url=${encodeURIComponent(csvUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(csvUrl)}`,
+  ];
+  let lastErr;
+  for (const proxy of proxies) {
+    try {
+      const res = await fetch(proxy, { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) continue;
+      // allorigins wraps in JSON; corsproxy returns raw
+      if (proxy.includes('allorigins')) {
+        const j = await res.json();
+        return j.contents;
+      } else {
+        return await res.text();
+      }
+    } catch(e) { lastErr = e; }
+  }
+  throw new Error('Semua proxy gagal: ' + lastErr?.message);
+}
+
+function parseCSV(text) {
+  const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  if (lines.length < 2) return [];
+  const headers = splitCSVLine(lines[0]).map(h=>h.trim());
+  return lines.slice(1).map((line, i) => {
+    const cols = splitCSVLine(line);
+    const obj = { _row: i + 2 };
+    headers.forEach((h, j) => obj[h] = (cols[j]||'').trim());
+    return obj;
+  });
+}
+
+function splitCSVLine(line) {
+  const result = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════
+// CALL APPS SCRIPT – guna fetch dengan no-cors fallback
+// ═══════════════════════════════════════════════════════
+async function callScript(params) {
+  if (!CFG.scriptUrl) {
+    showToast('Apps Script URL belum dikonfigurasi. Pergi Tetapan.','warn');
+    return null;
+  }
+  // JSONP approach – append params as query string, use fetch
+  const url = CFG.scriptUrl + '?' + new URLSearchParams(params).toString();
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      mode:   'cors',  // Apps Script dengan 'Anyone' access membenarkan ini
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } catch (e) {
+    // Fallback: cuba tanpa mode cors (no-cors tidak return body, tapi untuk write-only ok)
+    console.warn('CORS fetch gagal, cuba no-cors:', e.message);
+    showToast('⚠️ Tulis ke Sheets mungkin berjaya (CORS terhad). Refresh untuk sahkan.','warn');
+    try {
+      await fetch(url, { method:'GET', mode:'no-cors', signal: AbortSignal.timeout(8000) });
+      return { status:'ok', msg:'no-cors request hantar' };
+    } catch(e2) {
+      showToast('Gagal hantar ke Apps Script: ' + e2.message, 'err');
+      return null;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// FETCH SETIAP SHEET
+// ═══════════════════════════════════════════════════════
+async function fetchSheet(type, showLoad=false) {
+  if (showLoad) showOverlay('Memuatkan data ' + type.toUpperCase() + '...', 'Menyambung ke Google Sheets');
+  setBadge(type, 'wait', 'Memuatkan...');
+  const gidMap = { dv3: CFG.gids.dv3, ppm: CFG.gids.ppm, kt: CFG.gids.kt };
+  try {
+    const text = await fetchCSV(gidMap[type]);
+    const rows = parseCSV(text);
+    let count = 0;
+    if (type === 'dv3') {
+      dv3Data = rows.filter(r=>r['Penyenggara']||r['penyenggara']).map(r=>({
+        id:uid(), _row:r._row,
+        bulan:(r['Bulan']||r['bulan']||'').trim(),
+        tahun:(r['Tahun']||r['tahun']||'').toString().trim(),
+        maint:(r['Penyenggara']||r['penyenggara']||'').trim(),
+        tak:parseNum(r['Tak Siap']||r['Tak siap']||r['tak siap']),
+        siap:parseNum(r['Siap']||r['siap']),
+        jumlah:parseNum(r['Jumlah Doket']||r['jumlah doket'])
+      }));
+      console.log('DV3 data loaded:', dv3Data.length, 'rows. Sample:', dv3Data[0]);
+      count = dv3Data.length;
+      populateSel('dv3');
+      renderDV3();
+    } else if (type === 'ppm') {
+      ppmData = rows.filter(r=>r['Penyenggara']||r['penyenggara']).map(r=>({
+        id:uid(), _row:r._row,
+        bulan:(r['Bulan']||r['bulan']||'').trim(),
+        tahun:(r['Tahun']||r['tahun']||'').toString().trim(),
+        maint:(r['Penyenggara']||r['penyenggara']||'').trim(),
+        tak:parseNum(r['Tak Siap']||r['Tak siap']||r['tak siap']),
+        siap:parseNum(r['Siap']||r['siap']),
+        jumlah:parseNum(r['Jumlah PPM']||r['Jumlah ppm']||r['jumlah ppm'])
+      }));
+      console.log('PPM data loaded:', ppmData.length, 'rows. Sample:', ppmData[0]);
+      count = ppmData.length;
+      populateSel('ppm');
+      renderPPM();
+    } else {
+      ktData = rows.filter(r=>r['Kontraktor']||r['kontraktor']).map(r=>({
+        id:uid(), _row:r._row,
+        bulan:(r['Bulan']||r['bulan']||'').trim(),
+        tahun:(r['Tahun']||r['tahun']||'').toString().trim(),
+        kt:(r['Kontraktor']||r['kontraktor']||'').trim(),
+        zon:(r['Zon']||r['zon']||'').trim(),
+        doket:parseNum(r['Jumlah Doket']||r['jumlah doket']),
+        rm:parseNum(r['Jumlah RM']||r['Jumlah Rm']||r['jumlah rm']||r['RM']||r['rm'])
+      }));
+      console.log('KT data loaded:', ktData.length, 'rows. Sample:', ktData[0]);
+      count = ktData.length;
+      populateSel('kt');
+      renderKontraktor();
+    }
+    lastSync[type] = new Date();
+    setBadge(type, 'ok', `✓ ${count} baris`);
+    setSyncSub(type, `${count} rekod · Kemaskini: ${fmt(lastSync[type])}`);
+    if (showLoad) hideOverlay();
+    return true;
+  } catch(e) {
+    console.error(type, e);
+    setBadge(type, 'err', 'Gagal sambung');
+    setSyncSub(type, 'Ralat: ' + e.message);
+    if (showLoad) hideOverlay();
+    return false;
+  }
+}
+
+async function refreshAll() {
+  const icon = gv('rfr-icon');
+  icon.classList.add('spin');
+  gv('global-badge').className='sync-badge sb-wait';
+  gv('global-badge').innerHTML='<i class="ti ti-refresh spin"></i> Memuatkan';
+  showOverlay('Memuatkan semua data...','DV3 · PPM · Kontraktor');
+  const [r1,r2,r3] = await Promise.all([fetchSheet('dv3'),fetchSheet('ppm'),fetchSheet('kt')]);
+  hideOverlay();
+  icon.classList.remove('spin');
+  if(r1&&r2&&r3){
+    gv('global-badge').className='sync-badge sb-ok';
+    gv('global-badge').innerHTML='<i class="ti ti-check"></i> Segar';
+  } else {
+    gv('global-badge').className='sync-badge sb-err';
+    gv('global-badge').innerHTML='<i class="ti ti-alert-circle"></i> Ada ralat';
+  }
+  renderDashboard();
+}
+
+// ═══════════════════════════════════════════════════════
+// BADGE / STATUS
+// ═══════════════════════════════════════════════════════
+function setBadge(type, state, msg) {
+  const map={dv3:'dv3-badge',ppm:'ppm-badge',kt:'kt-badge'};
+  const el=gv(map[type]); if(!el) return;
+  const cls={ok:'sb-ok',err:'sb-err',wait:'sb-wait'};
+  const ico={ok:'ti-check',err:'ti-alert-circle',wait:'ti-refresh'};
+  el.className='sync-badge '+cls[state];
+  el.innerHTML=`<i class="ti ${ico[state]}${state==='wait'?' spin':''}"></i> ${msg}`;
+}
+function setSyncSub(type,msg){
+  const map={dv3:'dv3-sync-sub',ppm:'ppm-sync-sub',kt:'kt-sync-sub'};
+  const el=gv(map[type]); if(el) el.textContent=msg;
+}
+
+// ═══════════════════════════════════════════════════════
+// POPULATE SELECTS
+// ═══════════════════════════════════════════════════════
+function populateSel(type) {
+  if(type==='dv3'){
+    const m=[...new Set(dv3Data.map(d=>d.maint).filter(Boolean))].sort();
+    ['dv3-f-maint','dv3-t-maint'].forEach(id=>{
+      const el=gv(id); if(!el) return;
+      const cur=el.value; el.innerHTML='<option value="">Semua</option>';
+      m.forEach(v=>el.innerHTML+=`<option${v===cur?' selected':''}>${v}</option>`);
+    });
+  } else if(type==='ppm'){
+    const m=[...new Set(ppmData.map(d=>d.maint).filter(Boolean))].sort();
+    ['ppm-f-maint','ppm-t-maint'].forEach(id=>{
+      const el=gv(id); if(!el) return;
+      el.innerHTML='<option value="">Semua</option>';
+      m.forEach(v=>el.innerHTML+=`<option>${v}</option>`);
+    });
+  } else {
+    const m=[...new Set(ktData.map(d=>d.kt).filter(Boolean))].sort();
+    ['kt-f-kt','kt-t-kt'].forEach(id=>{
+      const el=gv(id); if(!el) return;
+      el.innerHTML='<option value="">Semua</option>';
+      m.forEach(v=>el.innerHTML+=`<option>${v}</option>`);
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════
+const charts={};
+// ─── Register datalabels plugin globally ─────────────────
 Chart.register(ChartDataLabels);
 
-// Helper: format label value compactly
-function fmtLbl(v, isRM=false){
-  if(!v||v===0) return '';
-  if(v>=1e6) return (isRM?'RM ':'')+( v/1e6).toFixed(2)+'M';
-  if(v>=1e3) return (isRM?'RM ':'')+( v/1e3).toFixed(1)+'k';
-  return (isRM?'RM ':'')+Math.round(v).toLocaleString('ms-MY');
+function mkChart(id, type, labels, datasets, opts={}) {
+  if(charts[id]){charts[id].destroy();delete charts[id];}
+  const el=gv(id); if(!el) return;
+  const g=gc(), t=tc();
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  const defS={x:{grid:{color:g},ticks:{color:t,font:{size:10}}},y:{grid:{color:g},ticks:{color:t,font:{size:10}}}};
+
+  // ── Datalabels config mengikut jenis carta ──────────────
+  const isHorizBar = opts.extra?.indexAxis === 'y'; // carta bar mendatar (ranking kt)
+
+  const barDatalabels = {
+    display: true,
+    anchor: 'end',
+    align: 'end',          // label menegak di hujung bar
+    rotation: -90,         // putar 90° supaya teks menegak
+    offset: 2,
+    color: isDark ? '#e5e7eb' : '#374151',
+    font: { size: 9, weight: '600' },
+    formatter: (value) => {
+      if(value === 0 || value === null || value === undefined) return '';
+      if(typeof value === 'number'){
+        if(value >= 1000000) return 'RM '+(value/1000000).toFixed(1)+'J';
+        if(value >= 1000) return value >= 10000 ? 'RM '+(value/1000).toFixed(0)+'K' : value.toLocaleString();
+        return value % 1 === 0 ? value : value.toFixed(1);
+      }
+      return value;
+    }
+  };
+
+  // Bar mendatar: label horizontal di hujung kanan bar
+  const horizBarDatalabels = {
+    display: true,
+    anchor: 'end',
+    align: 'end',
+    rotation: 0,           // horizontal
+    offset: 4,
+    color: isDark ? '#e5e7eb' : '#374151',
+    font: { size: 9, weight: '600' },
+    formatter: (value) => {
+      if(value === 0) return '';
+      if(value >= 1000000) return 'RM '+(value/1000000).toFixed(1)+'J';
+      if(value >= 1000) return 'RM '+(value/1000).toFixed(0)+'K';
+      return value.toLocaleString();
+    }
+  };
+
+  // Bar % (ranking penyenggara)
+  const pctBarDatalabels = {
+    display: true,
+    anchor: 'end',
+    align: 'end',
+    rotation: -90,
+    offset: 2,
+    color: isDark ? '#e5e7eb' : '#374151',
+    font: { size: 9, weight: '700' },
+    formatter: (value) => value > 0 ? value+'%' : ''
+  };
+
+  // Line: label horizontal di atas titik
+  const lineDatalabels = {
+    display: true,
+    anchor: 'end',
+    align: 'top',
+    rotation: 0,           // horizontal
+    offset: 4,
+    color: isDark ? '#e5e7eb' : '#374151',
+    font: { size: 9, weight: '600' },
+    formatter: (value) => {
+      if(value === 0 || value === null || value === undefined) return '';
+      if(value >= 1000000) return 'RM '+(value/1000000).toFixed(1)+'J';
+      if(value >= 1000) return value >= 10000 ? 'RM '+(value/1000).toFixed(0)+'K' : value.toLocaleString();
+      return value % 1 === 0 ? value : value.toFixed(1);
+    }
+  };
+
+  // Pilih config datalabels berdasarkan jenis carta
+  let dlConfig;
+  if(type === 'line') {
+    dlConfig = lineDatalabels;
+  } else if(type === 'bar' && isHorizBar) {
+    dlConfig = horizBarDatalabels;
+  } else if(opts._pct) {
+    dlConfig = pctBarDatalabels;
+  } else {
+    dlConfig = barDatalabels;
+  }
+
+  // Datasets: apply datalabels ke setiap dataset
+  const ds = datasets.map(d => ({ ...d, datalabels: dlConfig }));
+
+  // Stacked bar (siap + tak siap) — label dalam bar, horizontal
+  if(opts.stacked) {
+    ds.forEach(d => {
+      d.datalabels = {
+        display: (ctx) => ctx.dataset.data[ctx.dataIndex] > 0,
+        anchor: 'center',
+        align: 'center',
+        rotation: 0,
+        color: '#fff',
+        font: { size: 9, weight: '600' },
+        formatter: (v) => v > 0 ? v : ''
+      };
+    });
+  }
+
+  charts[id] = new Chart(el, {
+    type,
+    data: { labels, datasets: ds },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: type==='bar' ? 22 : 18, right: isHorizBar ? 50 : 8 } },
+      plugins: {
+        legend: { display: opts.legend||false, labels: { color:t, font:{size:11}, usePointStyle:true } },
+        datalabels: dlConfig
+      },
+      scales: opts.scales || defS,
+      ...(opts.extra || {})
+    }
+  });
+}
+function noData(wrapId,msg='Tiada data'){
+  if(charts[wrapId]){charts[wrapId].destroy();delete charts[wrapId];}
+  const el=gv(wrapId); if(!el) return;
+  el.style.display='none';
+  const wrap=el.parentElement;
+  if(!wrap.querySelector('.chart-empty'))
+    wrap.insertAdjacentHTML('beforeend',`<div class="chart-empty"><i class="ti ti-chart-bar-off"></i><span>${msg}</span></div>`);
+}
+function resetWrap(wrapId){
+  const el=gv(wrapId); if(!el) return;
+  el.style.display='';
+  const wrap=el.parentElement;
+  wrap.querySelectorAll('.chart-empty').forEach(e=>e.remove());
 }
 
-// Shared datalabels config for BAR charts (show on top of bar)
-function barDL(isRM=false, color='#333'){
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+function updateBadge(id, from, to){
+  const el=gv(id); if(!el) return;
+  el.textContent=rangeLabel(from,to);
+}
+
+function renderDashboard() {
+  const {from:gF, to:gT, year:gy} = getGlobRange();
+  const dv3=dv3Data.filter(d=>(gy==='0'||d.tahun===gy)&&inRange(d.bulan,gF,gT));
+  const ppm=ppmData.filter(d=>(gy==='0'||d.tahun===gy)&&inRange(d.bulan,gF,gT));
+  const kt=ktData.filter(d=>(gy==='0'||d.tahun===gy)&&inRange(d.bulan,gF,gT));
+  const d3S=dv3.reduce((a,d)=>a+d.siap,0),d3T=dv3.reduce((a,d)=>a+d.tak,0),d3Tot=d3S+d3T;
+  const pS=ppm.reduce((a,d)=>a+d.siap,0),pT=ppm.reduce((a,d)=>a+d.tak,0),pTot=pS+pT;
+  const kRM=kt.reduce((a,d)=>a+d.rm,0),kD=kt.reduce((a,d)=>a+d.doket,0);
+  const d3P=d3Tot?Math.round(d3S/d3Tot*100):0, pP=pTot?Math.round(pS/pTot*100):0;
+  gv('dash-metrics').innerHTML=`
+    <div class="metric-card"><div class="metric-accent" style="background:#1a56db"></div><div class="metric-label">Jumlah Doket DV3</div><div class="metric-value">${d3Tot}</div><span class="metric-badge badge-info">${d3P}% siap</span></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#0e9f6e"></div><div class="metric-label">DV3 Siap</div><div class="metric-value" style="color:#0e9f6e">${d3S}</div><div class="metric-sub">Dari ${d3Tot} doket</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#e02424"></div><div class="metric-label">DV3 Tak Siap</div><div class="metric-value" style="color:#e02424">${d3T}</div><span class="metric-badge badge-err">Perlu tindakan</span></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#7e3af2"></div><div class="metric-label">Jumlah PPM</div><div class="metric-value">${pTot}</div><span class="metric-badge ${pTot?'badge-ok':'badge-warn'}">${pP}% siap</span></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#c27803"></div><div class="metric-label">Doket Kontraktor</div><div class="metric-value">${kD}</div><div class="metric-sub">${new Set(kt.map(d=>d.kt)).size} kontraktor</div></div>
+    <div class="metric-card"><div class="metric-accent" style="background:#0694a2"></div><div class="metric-label">Nilai RM Kontraktor</div><div class="metric-value" style="font-size:20px">RM ${kRM.toLocaleString()}</div><span class="metric-badge badge-warn">Terkumpul</span></div>`;
+  // C1 DV3/year
+  resetWrap('c-dv3-bar');
+  const byYD={};dv3Data.forEach(d=>{if(!byYD[d.tahun])byYD[d.tahun]=0;byYD[d.tahun]+=d.siap+d.tak;});
+  const yl=Object.keys(byYD).sort();
+  if(yl.length) mkChart('c-dv3-bar','bar',yl,[{label:'Doket DV3',data:yl.map(y=>byYD[y]),backgroundColor:'#1a56db',borderRadius:4}]);
+  else noData('c-dv3-bar','Tiada data DV3');
+  // C2 PPM/bulan
+  resetWrap('c-ppm-bar');
+  const byBP={};ppmData.filter(d=>(gy==='0'||d.tahun===gy)).forEach(d=>{if(!byBP[d.bulan])byBP[d.bulan]=0;byBP[d.bulan]+=d.siap+d.tak;});
+  const bl=BULAN_ORDER.filter(b=>byBP[b]);
+  if(bl.length) mkChart('c-ppm-bar','bar',bl,[{label:'PPM',data:bl.map(b=>byBP[b]),backgroundColor:'#7e3af2',borderRadius:4}]);
+  else noData('c-ppm-bar','Tiada data PPM');
+  // C3 RM/year
+  resetWrap('c-rm-line');
+  const byYR={};ktData.forEach(d=>{if(!byYR[d.tahun])byYR[d.tahun]=0;byYR[d.tahun]+=d.rm;});
+  const rl=Object.keys(byYR).sort();
+  if(rl.length) mkChart('c-rm-line','line',rl,[{label:'RM',data:rl.map(y=>byYR[y]),borderColor:'#0e9f6e',backgroundColor:'rgba(14,159,110,0.12)',fill:true,tension:0.4,pointRadius:4}],{extra:{scales:{y:{ticks:{callback:v=>'RM '+Math.round(v/1000)+'K',color:tc(),font:{size:10}},grid:{color:gc()}},x:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}}});
+  else noData('c-rm-line','Tiada data kontraktor');
+  // C4 ranking maint
+  resetWrap('c-rank-maint');
+  const byMP={};dv3Data.forEach(d=>{if(!byMP[d.maint])byMP[d.maint]={s:0,t:0};byMP[d.maint].s+=d.siap;byMP[d.maint].t+=d.tak;});
+  const ml=Object.keys(byMP).filter(m=>byMP[m].s||byMP[m].t).sort((a,b)=>{const A=byMP[a],B=byMP[b];return((B.s+B.t)?B.s/(B.s+B.t):0)-((A.s+A.t)?A.s/(A.s+A.t):0);});
+  if(ml.length) mkChart('c-rank-maint','bar',ml,[{label:'% Siap',data:ml.map(l=>{const x=byMP[l];return(x.s+x.t)?Math.round(x.s/(x.s+x.t)*100):0;}),backgroundColor:ml.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:4}],{_pct:true,extra:{scales:{x:{ticks:{maxRotation:30,color:tc(),font:{size:9}},grid:{color:gc()}},y:{min:0,max:100,ticks:{callback:v=>v+'%',color:tc(),font:{size:10}},grid:{color:gc()}}}}});
+  else noData('c-rank-maint','Tiada data penyenggara');
+  // C5 ranking kt
+  resetWrap('c-rank-kt');
+  const byKR={};ktData.forEach(d=>{if(!byKR[d.kt])byKR[d.kt]=0;byKR[d.kt]+=d.rm;});
+  const ks=Object.entries(byKR).sort((a,b)=>b[1]-a[1]);
+  if(ks.length) mkChart('c-rank-kt','bar',ks.map(x=>x[0]),[{label:'RM',data:ks.map(x=>x[1]),backgroundColor:PALETTE.slice(0,ks.length),borderRadius:4}],{extra:{indexAxis:'y',layout:{padding:{top:8,right:70}},plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'RM '+Math.round(v/1000)+'K',color:tc(),font:{size:10}},grid:{color:gc()}},y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}}});
+  else noData('c-rank-kt','Tiada data kontraktor');
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER DV3
+// ═══════════════════════════════════════════════════════
+function renderDV3() {
+  const y=gv('dv3-f-year').value;
+  const mF=gv('dv3-f-month-from')?.value||'0', mT=gv('dv3-f-month-to')?.value||'0';
+  const mnt=gv('dv3-f-maint').value;
+  updateBadge('dv3-range-badge', mF, mT);
+  const data=dv3Data.filter(d=>(y==='0'||d.tahun===y)&&inRange(d.bulan,mF,mT)&&(!mnt||d.maint===mnt));
+  const jS=data.reduce((a,d)=>a+d.siap,0),jT=data.reduce((a,d)=>a+d.tak,0),jTot=jS+jT,pct=jTot?Math.round(jS/jTot*100):0;
+  gv('dv3-metrics').innerHTML=metricCards([
+    {c:'#1a56db',l:'Jumlah Doket',v:jTot},
+    {c:'#0e9f6e',l:'Siap',v:jS,vc:'#0e9f6e'},
+    {c:'#e02424',l:'Tak Siap',v:jT,vc:'#e02424'},
+    {c:'#c27803',l:'% Siap',v:pct+'%'}
+  ]);
+  resetWrap('c-dv3-staff');resetWrap('c-dv3-trend');
+  const byM={};data.forEach(d=>{if(!byM[d.maint])byM[d.maint]={s:0,t:0};byM[d.maint].s+=d.siap;byM[d.maint].t+=d.tak;});
+  const ls=Object.keys(byM).filter(k=>byM[k].s||byM[k].t);
+  if(ls.length) mkChart('c-dv3-staff','bar',ls,[{label:'Siap',data:ls.map(l=>byM[l].s),backgroundColor:'#0e9f6e',borderRadius:3},{label:'Tak Siap',data:ls.map(l=>byM[l].t),backgroundColor:'#e02424',borderRadius:3}],{legend:true,scales:{x:{ticks:{maxRotation:30,color:tc(),font:{size:9}},grid:{color:gc()}},y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}});
+  else noData('c-dv3-staff','Tiada data');
+  const byY={};dv3Data.forEach(d=>{if(!byY[d.tahun])byY[d.tahun]=0;byY[d.tahun]+=d.siap+d.tak;});
+  const yl=Object.keys(byY).sort();
+  if(yl.length) mkChart('c-dv3-trend','line',yl,[{label:'Doket',data:yl.map(y=>byY[y]),borderColor:'#1a56db',backgroundColor:'rgba(26,86,219,0.1)',fill:true,tension:0.4,pointRadius:4}],{extra:{scales:{y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}},x:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}}});
+  else noData('c-dv3-trend','Tiada data');
+  // table
+  const ty=gv('dv3-t-year').value,tm=gv('dv3-t-maint').value;
+  const td=dv3Data.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,mF,mT)&&(!tm||d.maint===tm));
+  gv('dv3-tbody').innerHTML=td.length ? td.map((d,i)=>pctRow([i+1,d.bulan,d.tahun,`<b>${d.maint}</b>`,d.tak,d.siap,d.siap+d.tak],d.siap,d.tak,'dv3',d.id)).join('') : emptyTr(9);
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER PPM
+// ═══════════════════════════════════════════════════════
+function renderPPM() {
+  const y=gv('ppm-f-year').value;
+  const mF=gv('ppm-f-month-from')?.value||'0', mT=gv('ppm-f-month-to')?.value||'0';
+  const mnt=gv('ppm-f-maint').value;
+  updateBadge('ppm-range-badge', mF, mT);
+  const data=ppmData.filter(d=>(y==='0'||d.tahun===y)&&inRange(d.bulan,mF,mT)&&(!mnt||d.maint===mnt));
+  const jS=data.reduce((a,d)=>a+d.siap,0),jT=data.reduce((a,d)=>a+d.tak,0),jTot=jS+jT,pct=jTot?Math.round(jS/jTot*100):0;
+  gv('ppm-metrics').innerHTML=metricCards([
+    {c:'#7e3af2',l:'Jumlah PPM',v:jTot},
+    {c:'#0e9f6e',l:'Siap',v:jS,vc:'#0e9f6e'},
+    {c:'#e02424',l:'Tak Siap',v:jT,vc:'#e02424'},
+    {c:'#c27803',l:'% Siap',v:pct+'%'}
+  ]);
+  resetWrap('c-ppm-staff');resetWrap('c-ppm-trend');
+  const byM={};data.forEach(d=>{if(!byM[d.maint])byM[d.maint]={s:0,t:0};byM[d.maint].s+=d.siap;byM[d.maint].t+=d.tak;});
+  const ls=Object.keys(byM).filter(k=>byM[k].s||byM[k].t);
+  if(ls.length) mkChart('c-ppm-staff','bar',ls,[{label:'Siap',data:ls.map(l=>byM[l].s),backgroundColor:'#0e9f6e',borderRadius:3},{label:'Tak Siap',data:ls.map(l=>byM[l].t),backgroundColor:'#e02424',borderRadius:3}],{legend:true,scales:{x:{ticks:{maxRotation:30,color:tc(),font:{size:9}},grid:{color:gc()}},y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}});
+  else noData('c-ppm-staff','Tiada data');
+  const byB={};data.forEach(d=>{if(!byB[d.bulan])byB[d.bulan]=0;byB[d.bulan]+=d.siap+d.tak;});
+  const bl=BULAN_ORDER.filter(b=>byB[b]);
+  if(bl.length) mkChart('c-ppm-trend','line',bl,[{label:'PPM',data:bl.map(b=>byB[b]),borderColor:'#7e3af2',backgroundColor:'rgba(126,58,242,0.1)',fill:true,tension:0.4,pointRadius:4}],{extra:{scales:{y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}},x:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}}});
+  else noData('c-ppm-trend','Tiada data');
+  const ty=gv('ppm-t-year').value,tm=gv('ppm-t-maint').value;
+  const td=ppmData.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,mF,mT)&&(!tm||d.maint===tm));
+  gv('ppm-tbody').innerHTML=td.length ? td.map((d,i)=>pctRow([i+1,d.bulan,d.tahun,`<b>${d.maint}</b>`,d.tak,d.siap,d.siap+d.tak],d.siap,d.tak,'ppm',d.id)).join('') : emptyTr(9);
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER KONTRAKTOR
+// ═══════════════════════════════════════════════════════
+function renderKontraktor() {
+  const y=gv('kt-f-year').value;
+  const mF=gv('kt-f-month-from')?.value||'0', mT=gv('kt-f-month-to')?.value||'0';
+  const kt=gv('kt-f-kt').value, zon=gv('kt-f-zon').value;
+  updateBadge('kt-range-badge', mF, mT);
+  const data=ktData.filter(d=>(y==='0'||d.tahun===y)&&inRange(d.bulan,mF,mT)&&(!kt||d.kt===kt)&&(!zon||d.zon===zon));
+  const jD=data.reduce((a,d)=>a+d.doket,0),jRM=data.reduce((a,d)=>a+d.rm,0),jKt=new Set(data.map(d=>d.kt)).size;
+  gv('kt-metrics').innerHTML=metricCards([
+    {c:'#1a56db',l:'Jumlah Doket',v:jD},
+    {c:'#0694a2',l:'Jumlah RM',v:'RM '+jRM.toLocaleString(),vs:20},
+    {c:'#c27803',l:'Bil. Kontraktor',v:jKt}
+  ]);
+  resetWrap('c-kt-doket');resetWrap('c-kt-rm');
+  const byKt={};data.forEach(d=>{if(!byKt[d.kt])byKt[d.kt]={doket:0,rm:0};byKt[d.kt].doket+=d.doket;byKt[d.kt].rm+=d.rm;});
+  const kl=Object.keys(byKt);
+  if(kl.length){
+    mkChart('c-kt-doket','bar',kl,[{label:'Doket',data:kl.map(l=>byKt[l].doket),backgroundColor:PALETTE,borderRadius:4}],{scales:{x:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}},y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}});
+    mkChart('c-kt-rm','bar',kl,[{label:'RM',data:kl.map(l=>byKt[l].rm),backgroundColor:PALETTE,borderRadius:4}],{extra:{scales:{x:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}},y:{ticks:{callback:v=>'RM '+Math.round(v/1000)+'K',color:tc(),font:{size:10}},grid:{color:gc()}}}}});
+  } else { noData('c-kt-doket','Tiada data'); noData('c-kt-rm','Tiada data'); }
+  const ty=gv('kt-t-year').value,tkt=gv('kt-t-kt').value;
+  const td=ktData.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,mF,mT)&&(!tkt||d.kt===tkt));
+  gv('kt-tbody').innerHTML=td.length ? td.map((d,i)=>`<tr><td style="color:var(--txt2)">${i+1}</td><td>${d.bulan}</td><td>${d.tahun}</td><td><b>${d.kt}</b></td><td>${d.zon}</td><td style="font-weight:600">${d.doket}</td><td style="font-weight:600;color:#0694a2">RM ${d.rm.toLocaleString()}</td><td><button class="btn-sm" onclick="editRow('kt','${d.id}')"><i class="ti ti-edit"></i></button> <button class="btn-sm btn-del" onclick="delRow('kt','${d.id}')"><i class="ti ti-trash"></i></button></td></tr>`).join('') : emptyTr(8);
+}
+
+// ═══════════════════════════════════════════════════════
+// TABLE HELPERS
+// ═══════════════════════════════════════════════════════
+function pctRow(cells, siap, tak, type, id) {
+  const tot=siap+tak, p=tot?Math.round(siap/tot*100):0, col=p>=80?'#0e9f6e':p>=50?'#c27803':'#e02424';
+  const tds = cells.map((c,i)=>{
+    if(i===4) return `<td style="color:#e02424;font-weight:600">${c}</td>`;
+    if(i===5) return `<td style="color:#0e9f6e;font-weight:600">${c}</td>`;
+    if(i===0) return `<td style="color:var(--txt2)">${c}</td>`;
+    return `<td>${c}</td>`;
+  }).join('');
+  const pBar=`<div class="pct-cell"><span style="font-weight:700;color:${col};min-width:38px">${p}%</span><div class="pct-bar" style="width:55px"><div class="pct-fill" style="width:${p}%;background:${col}"></div></div></div>`;
+  return `<tr>${tds}<td>${pBar}</td><td><button class="btn-sm" onclick="editRow('${type}','${id}')"><i class="ti ti-edit"></i></button> <button class="btn-sm btn-del" onclick="delRow('${type}','${id}')"><i class="ti ti-trash"></i></button></td></tr>`;
+}
+function emptyTr(cols){ return `<tr><td colspan="${cols}" style="text-align:center;padding:28px;color:var(--txt2)"><i class="ti ti-database-off" style="display:block;font-size:26px;margin-bottom:8px;opacity:.4"></i>Tiada rekod dijumpai</td></tr>`; }
+function metricCards(items){ return items.map(x=>`<div class="metric-card"><div class="metric-accent" style="background:${x.c}"></div><div class="metric-label">${x.l}</div><div class="metric-value" style="${x.vc?'color:'+x.vc+';':''} ${x.vs?'font-size:'+x.vs+'px;':''}">${x.v}</div></div>`).join(''); }
+
+// ═══════════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════════
+let mCtx={};
+const BOPT=BULAN_ORDER.map(b=>`<option>${b}</option>`).join('');
+const YOPT=['2023','2024','2025','2026'].map(y=>`<option${y==='2024'?' selected':''}>${y}</option>`).join('');
+
+function editRow(type,id){
+  const arr=type==='dv3'?dv3Data:type==='ppm'?ppmData:ktData;
+  const rec=arr.find(d=>d.id===id); if(!rec) return;
+  mCtx={type,id,mode:'edit',_row:rec._row};
+  gv('modal-title').innerHTML='<i class="ti ti-edit"></i> Edit Rekod';
+  let h=bulanTahunFields();
+  if(type==='dv3'||type==='ppm'){
+    h+=field('Penyenggara',`<input type="text" id="m-maint" value="${rec.maint}">`);
+    h+=field('Siap',`<input type="number" id="m-siap" value="${rec.siap}" min="0">`);
+    h+=field('Tak Siap',`<input type="number" id="m-tak" value="${rec.tak}" min="0">`);
+  } else {
+    h+=field('Kontraktor',`<input type="text" id="m-kt" value="${rec.kt}">`);
+    h+=field('Zon',`<select id="m-zon"><option>Zon A</option><option>Zon B</option><option>Zon C</option></select>`);
+    h+=field('Jml Doket',`<input type="number" id="m-doket" value="${rec.doket}" min="0">`);
+    h+=field('Nilai RM',`<input type="number" id="m-rm" value="${rec.rm}" min="0">`);
+  }
+  gv('modal-body').innerHTML=h;
+  gv('m-bulan').value=rec.bulan; gv('m-tahun').value=rec.tahun;
+  if(gv('m-zon')&&rec.zon) gv('m-zon').value=rec.zon;
+  gv('modal-overlay').classList.add('open');
+}
+
+function openAddModal(type){
+  mCtx={type,mode:'add'};
+  gv('modal-title').innerHTML='<i class="ti ti-plus"></i> Tambah Rekod';
+  let h=bulanTahunFields();
+  if(type==='dv3'||type==='ppm'){
+    const arr=type==='dv3'?dv3Data:ppmData;
+    const maints=[...new Set(arr.map(d=>d.maint))].sort();
+    h+=field('Penyenggara',`<input type="text" id="m-maint" list="ml-${type}" placeholder="Nama"><datalist id="ml-${type}">${maints.map(m=>`<option>${m}</option>`).join('')}</datalist>`);
+    h+=field('Siap',`<input type="number" id="m-siap" value="0" min="0">`);
+    h+=field('Tak Siap',`<input type="number" id="m-tak" value="0" min="0">`);
+  } else {
+    const kts=[...new Set(ktData.map(d=>d.kt))].sort();
+    h+=field('Kontraktor',`<input type="text" id="m-kt" list="ml-kt" placeholder="Nama"><datalist id="ml-kt">${kts.map(k=>`<option>${k}</option>`).join('')}</datalist>`);
+    h+=field('Zon',`<select id="m-zon"><option>Zon A</option><option>Zon B</option><option>Zon C</option></select>`);
+    h+=field('Jml Doket',`<input type="number" id="m-doket" value="0" min="0">`);
+    h+=field('Nilai RM',`<input type="number" id="m-rm" value="0" min="0">`);
+  }
+  if(!CFG.scriptUrl) h+=`<div class="alert alert-warn" style="margin-top:8px;font-size:11px">⚠️ Apps Script belum dikonfigurasi. Rekod disimpan tempatan sahaja.</div>`;
+  gv('modal-body').innerHTML=h;
+  gv('modal-overlay').classList.add('open');
+}
+
+function bulanTahunFields(){ return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="modal-row"><label>Bulan</label><select id="m-bulan">${BOPT}</select></div><div class="modal-row"><label>Tahun</label><select id="m-tahun">${YOPT}</select></div></div>`; }
+function field(label,input){ return `<div class="modal-row"><label>${label}</label>${input}</div>`; }
+
+async function saveModal(){
+  const {type,id,mode,_row}=mCtx;
+  const btn=gv('modal-save-btn');
+  btn.disabled=true; btn.innerHTML='<i class="ti ti-refresh spin"></i> Menyimpan...';
+  const bulan=gv('m-bulan').value, tahun=gv('m-tahun').value;
+  let rowArr=[], rec={id:mode==='edit'?id:uid(), _row, bulan, tahun};
+  if(type==='dv3'||type==='ppm'){
+    rec.maint=gv('m-maint')?.value||'';
+    rec.siap=+gv('m-siap')?.value||0; rec.tak=+gv('m-tak')?.value||0; rec.jumlah=rec.siap+rec.tak;
+    rowArr=[bulan,tahun,rec.maint,rec.tak,rec.siap,rec.jumlah];
+  } else {
+    rec.kt=gv('m-kt')?.value||''; rec.zon=gv('m-zon')?.value||'';
+    rec.doket=+gv('m-doket')?.value||0; rec.rm=+gv('m-rm')?.value||0;
+    rowArr=[bulan,tahun,rec.kt,rec.zon,rec.doket,rec.rm];
+  }
+  // Simpan tempatan
+  const arr=type==='dv3'?dv3Data:type==='ppm'?ppmData:ktData;
+  if(mode==='edit'){ const i=arr.findIndex(d=>d.id===id); if(i>=0) arr[i]={...arr[i],...rec}; }
+  else arr.push(rec);
+  // Sync ke Sheets
+  let extra='';
+  if(CFG.scriptUrl){
+    const tabKey = type; // dv3, ppm, kontraktor — mesti sama dengan SHEET_NAMES dalam Apps Script
+    const params = {
+      action:   (mode==='edit' && _row) ? 'update' : 'append',
+      tab:      tabKey,
+      row:      JSON.stringify(rowArr)
+    };
+    if(mode==='edit' && _row) params.rowIndex = _row;
+    console.log('Sync ke Sheets:', params);
+    const res=await callScript(params);
+    console.log('Sheets response:', res);
+    extra = res?.status==='ok' ? ' · Sheets ✓' : ` · Sheets gagal: ${res?.msg||'tiada response'}`;
+  }
+  btn.disabled=false; btn.innerHTML='<i class="ti ti-device-floppy"></i> Simpan';
+  closeModal(); showToast('Rekod disimpan'+extra, extra.includes('✓')?'ok':'warn');
+  // populateSel: kontraktor type -> key 'kt', lain ikut terus
+  populateSel(type==='kontraktor'?'kt':type);
+  if(type==='dv3') renderDV3();
+  else if(type==='ppm') renderPPM();
+  else renderKontraktor();
+  renderDashboard();
+}
+
+async function delRow(type,id){
+  const arr=type==='dv3'?dv3Data:type==='ppm'?ppmData:ktData;
+  const rec=arr.find(d=>d.id===id);
+  if(!confirm('Padam rekod ini? Tindakan ini tidak boleh dibatalkan.')) return;
+  if(type==='dv3') dv3Data=dv3Data.filter(d=>d.id!==id);
+  else if(type==='ppm') ppmData=ppmData.filter(d=>d.id!==id);
+  else ktData=ktData.filter(d=>d.id!==id);
+  let extra='';
+  if(CFG.scriptUrl && rec?._row){
+    // type sudah betul: 'dv3', 'ppm', atau 'kontraktor' — sama dengan SHEET_NAMES
+    const res=await callScript({action:'delete', tab:type, rowIndex:rec._row});
+    console.log('delRow Sheets response:', res);
+    extra = res?.status==='ok' ? ' · Dipadam dari Sheets ✓' : ` · Sheets gagal: ${res?.msg||''}`;
+  }
+  if(type==='dv3') renderDV3();
+  else if(type==='ppm') renderPPM();
+  else renderKontraktor();
+  renderDashboard();
+  showToast('Rekod dipadam'+extra);
+}
+
+function closeModal(){ gv('modal-overlay').classList.remove('open'); }
+function closeModalOut(e){ if(e.target===gv('modal-overlay')) closeModal(); }
+
+// ═══════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════
+function saveSheetConfig(){
+  CFG.sheetId=gv('s-sheetid').value.trim();
+  CFG.gids.dv3=gv('s-gid-dv3').value.trim();
+  CFG.gids.ppm=gv('s-gid-ppm').value.trim();
+  CFG.gids.kt=gv('s-gid-kt').value.trim();
+  showToast('Konfigurasi disimpan. Memuatkan semula...');
+  setTimeout(refreshAll,400);
+}
+
+async function saveScriptUrl(){
+  const url=gv('s-script-url').value.trim();
+  if(!url){ showToast('Sila masukkan URL Apps Script','warn'); return; }
+  CFG.scriptUrl=url;
+  localStorage.setItem('scriptUrl',url);
+  const result=gv('script-test-result');
+  result.innerHTML='<i class="ti ti-refresh spin"></i> Menguji sambungan...';
+  const res=await callScript({action:'ping'});
+  if(res?.status==='ok'){
+    result.innerHTML=`<span style="color:#0e9f6e">✓ Berjaya! ${res.msg||''}</span>`;
+    showToast('Apps Script bersambung dengan jayanya!');
+  } else {
+    result.innerHTML=`<span style="color:#e02424">✗ Gagal. ${res?.msg||'Periksa URL dan pastikan Who has access: Anyone'}</span>`;
+    showToast('Gagal sambung. Periksa URL Apps Script.','err');
+  }
+}
+
+async function testConn(){
+  showToast('Menguji sambungan...');
+  const ok=await fetchSheet('dv3',false);
+  showToast(ok?'✓ Sambungan Google Sheets berjaya!':'✗ Gagal. Pastikan sheet sudah di-publish.', ok?'ok':'err');
+}
+
+function copyScript(){
+  const txt=gv('script-code').textContent;
+  navigator.clipboard.writeText(txt).then(()=>showToast('Kod Apps Script disalin!')).catch(()=>showToast('Sila salin manual dari kotak kod'));
+}
+
+function saveSettings(){
+  gv('sys-title').textContent=gv('s-sysname').value;
+  gv('tab-dv3-name').textContent=gv('s-dv3name').value;
+  gv('tab-ppm-name').textContent=gv('s-ppmname').value;
+  gv('tab-kontraktor-name').textContent=gv('s-ktname').value;
+  gv('dv3-page-title').textContent='Prestasi '+gv('s-dv3name').value;
+  gv('ppm-page-title').textContent='Prestasi '+gv('s-ppmname').value;
+  gv('kt-page-title').textContent='Prestasi '+gv('s-ktname').value;
+  showToast('Tetapan disimpan');
+}
+
+function setMode(m){
+  gv('mode-light').classList.toggle('active',m==='light');
+  gv('mode-dark').classList.toggle('active',m==='dark');
+  m==='dark'?document.documentElement.setAttribute('data-theme','dark'):document.documentElement.removeAttribute('data-theme');
+  setTimeout(()=>{renderDashboard();const a=document.querySelector('.tab-panel.active');if(a){const id=a.id.replace('tab-','');if(id==='dv3')renderDV3();else if(id==='ppm')renderPPM();else if(id==='kontraktor')renderKontraktor();}},80);
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB / OVERLAY / TOAST
+// ═══════════════════════════════════════════════════════
+function showTab(name,el){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  gv('tab-'+name).classList.add('active'); el.classList.add('active');
+  if(name==='dv3') renderDV3();
+  else if(name==='ppm') renderPPM();
+  else if(name==='kontraktor') renderKontraktor();
+  else if(name==='dashboard') renderDashboard();
+}
+function updateAll(){ renderDashboard(); }
+
+// Helper ambil nilai julat bulan dari topbar/filter
+function getGlobRange(){
   return {
-    anchor:'end', align:'end', offset:2,
-    font:{size:9, weight:'600'},
-    color: color,
-    rotation:0,
-    formatter:(v)=>fmtLbl(v, isRM),
-    display:(ctx)=>{ const v=ctx.dataset.data[ctx.dataIndex]; return v&&v>0; }
+    from: gv('glob-month-from')?.value||'0',
+    to:   gv('glob-month-to')?.value||'0',
+    year: gv('glob-year')?.value||'0'
   };
 }
 
-// For multi-dataset bars — hide label if value is 0
-function barDLmulti(isRM=false){
-  return {
-    anchor:'end', align:'end', offset:1,
-    font:{size:8, weight:'600'},
-    color:'#444',
-    clamp:true,
-    formatter:(v)=>fmtLbl(v, isRM),
-    display:(ctx)=>{ const v=ctx.dataset.data[ctx.dataIndex]; return v&&v>0; }
-  };
+function showOverlay(msg,sub){ gv('overlay-msg').textContent=msg||'';gv('overlay-sub').textContent=sub||'';gv('overlay').classList.add('show'); }
+function hideOverlay(){ gv('overlay').classList.remove('show'); }
+
+function showToast(msg,type='ok'){
+  const t=gv('toast');
+  const ico={ok:'ti-check',err:'ti-alert-circle',warn:'ti-alert-triangle'};
+  t.innerHTML=`<i class="ti ${ico[type]||'ti-check'}"></i>${msg}`;
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3200);
 }
 
-// For LINE chart — show label at each point
-function lineDL(isRM=false){
-  return {
-    anchor:'top', align:'top', offset:4,
-    font:{size:8, weight:'600'},
-    color: isRM ? '#c47800' : '#1a5fa8',
-    formatter:(v)=>fmtLbl(v, isRM),
-    display:(ctx)=>{ const v=ctx.dataset.data[ctx.dataIndex]; return v&&v>0; }
-  };
-}
-
-loadData();
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('load', refreshAll);
 </script>
 </body>
 </html>
