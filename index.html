@@ -709,15 +709,18 @@ async function fetchSheet(type, showLoad=false) {
     const rows = parseCSV(text);
     let count = 0;
     if (type === 'dv3') {
-      dv3Data = rows.filter(r=>r['Penyenggara']).map(r=>({
+      dv3Data = rows.filter(r=>r['Penyenggara']||r['penyenggara']).map(r=>({
         id:uid(), _row:r._row,
-        bulan:r['Bulan']||'', tahun:(r['Tahun']||'').toString(),
-        maint:r['Penyenggara']||'',
-        tak:parseNum(r['Tak Siap']), siap:parseNum(r['Siap']),
-        jumlah:parseNum(r['Jumlah Doket'])
+        bulan:(r['Bulan']||r['bulan']||'').trim(),
+        tahun:(r['Tahun']||r['tahun']||'').toString().trim(),
+        maint:(r['Penyenggara']||r['penyenggara']||'').trim(),
+        tak:parseNum(r['Tak Siap']||r['Tak siap']||r['tak siap']),
+        siap:parseNum(r['Siap']||r['siap']),
+        jumlah:parseNum(r['Jumlah Doket']||r['jumlah doket'])
       }));
       console.log('DV3 data loaded:', dv3Data.length, 'rows. Sample:', dv3Data[0]);
       count = dv3Data.length;
+      populateSel('dv3');
       renderDV3();
     } else if (type === 'ppm') {
       ppmData = rows.filter(r=>r['Penyenggara']||r['penyenggara']).map(r=>({
