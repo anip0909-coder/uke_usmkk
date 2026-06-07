@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistem Pemantauan Prestasi – Unit Kejuruteraan Elektrik</title>
+<title>Pemantauan Prestasi – UKE JPPF USMKK</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -323,7 +323,7 @@ tr:hover td{background:var(--bg2);}
     <div class="filter-group"><label>Tahun:</label><select id="kt-f-year" onchange="renderKontraktor()"><option value="0">Semua</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select></div>
     <div class="filter-group"><label>Dari Bulan:</label><select id="kt-f-month-from" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="kt-f-month-to" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select></div>
     <div class="filter-group"><label>Kontraktor:</label><select id="kt-f-kt" onchange="renderKontraktor()"><option value="">Semua</option></select></div>
-    <div class="filter-group"><label>Zon:</label><select id="kt-f-zon" onchange="renderKontraktor()"><option value="">Semua</option><option>Zon A</option><option>Zon B</option><option>Zon C</option></select></div>
+    <div class="filter-group"><label>Zon:</label><select id="kt-f-zon" onchange="renderKontraktor()"><option value="">Semua</option><option>Zon Kampus</option><option>Zon Hospital</option></select></div>
     <span class="range-badge" id="kt-range-badge">Semua Bulan</span>
   </div>
   <div class="metrics-grid" id="kt-metrics"></div>
@@ -337,6 +337,7 @@ tr:hover td{background:var(--bg2);}
       <label>Kontraktor:</label><select id="kt-t-kt" onchange="renderKontraktor()"><option value="">Semua</option></select>
       <label>Dari Bulan:</label><select id="kt-f-month-from" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="kt-f-month-to" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
       <label>Tahun:</label><select id="kt-t-year" onchange="renderKontraktor()"><option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select>
+      <label>Zon:</label><select id="kt-f-zon" onchange="renderKontraktor()"><option value="">Semua</option><option>Zon Kampus</option><option>Zon Hospital</option></select>
     </div>
     <div class="table-scroll"><table><thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Kontraktor</th><th>Zon</th><th>Jml Doket</th><th>Jumlah RM</th><th>Tindakan</th></tr></thead><tbody id="kt-tbody"></tbody></table></div>
   </div>
@@ -1155,7 +1156,7 @@ function editRow(type,id){
     h+=field('Tak Siap',`<input type="number" id="m-tak" value="${rec.tak}" min="0">`);
   } else {
     h+=field('Kontraktor',`<input type="text" id="m-kt" value="${rec.kt}">`);
-    h+=field('Zon',`<select id="m-zon"><option>Zon A</option><option>Zon B</option><option>Zon C</option></select>`);
+    h+=field('Zon',`<select id="m-zon"><option>Zon Kampus</option><option>Zon Hospital</option></select>`);
     h+=field('Jml Doket',`<input type="number" id="m-doket" value="${rec.doket}" min="0">`);
     h+=field('Nilai RM',`<input type="number" id="m-rm" value="${rec.rm}" min="0">`);
   }
@@ -1178,7 +1179,7 @@ function openAddModal(type){
   } else {
     const kts=[...new Set(ktData.map(d=>d.kt))].sort();
     h+=field('Kontraktor',`<input type="text" id="m-kt" list="ml-kt" placeholder="Nama"><datalist id="ml-kt">${kts.map(k=>`<option>${k}</option>`).join('')}</datalist>`);
-    h+=field('Zon',`<select id="m-zon"><option>Zon A</option><option>Zon B</option><option>Zon C</option></select>`);
+    h+=field('Zon',`<select id="m-zon"><option>Zon Kampus</option><option>Zon Hospital</option></select>`);
     h+=field('Jml Doket',`<input type="number" id="m-doket" value="0" min="0">`);
     h+=field('Nilai RM',`<input type="number" id="m-rm" value="0" min="0">`);
   }
