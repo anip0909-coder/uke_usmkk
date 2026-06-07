@@ -6,6 +6,7 @@
 <title>Sistem Pemantauan Prestasi – Unit Kejuruteraan Elektrik</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 :root{
   --primary:#1a56db;--primary-light:#e8f0fe;
@@ -82,7 +83,7 @@ select:focus{border-color:var(--primary);}
 .chart-card.full{grid-column:1/-1;}
 .chart-title{font-size:13px;font-weight:600;color:var(--txt1);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
 .chart-title i{font-size:15px;color:var(--primary);}
-.chart-wrap{position:relative;width:100%;}
+.chart-wrap{position:relative;width:100%;overflow:visible;} .chart-wrap canvas{overflow:visible;display:block;}
 .chart-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;color:var(--txt2);font-size:12px;height:100%;}
 .chart-empty i{font-size:28px;opacity:.35;}
 /* FILTERS */
@@ -835,16 +836,129 @@ function populateSel(type) {
 // CHARTS
 // ═══════════════════════════════════════════════════════
 const charts={};
-function mkChart(id,type,labels,datasets,opts={}) {
+// ─── Register datalabels plugin globally ─────────────────
+Chart.register(ChartDataLabels);
+
+function mkChart(id, type, labels, datasets, opts={}) {
   if(charts[id]){charts[id].destroy();delete charts[id];}
   const el=gv(id); if(!el) return;
-  const g=gc(),t=tc();
+  const g=gc(), t=tc();
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
   const defS={x:{grid:{color:g},ticks:{color:t,font:{size:10}}},y:{grid:{color:g},ticks:{color:t,font:{size:10}}}};
-  charts[id]=new Chart(el,{type,data:{labels,datasets},options:{
-    responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:opts.legend||false,labels:{color:t,font:{size:11},usePointStyle:true}}},
-    scales:opts.scales||defS,...(opts.extra||{})
-  }});
+
+  // ── Datalabels config mengikut jenis carta ──────────────
+  const isHorizBar = opts.extra?.indexAxis === 'y'; // carta bar mendatar (ranking kt)
+
+  const barDatalabels = {
+    display: true,
+    anchor: 'end',
+    align: 'end',          // label menegak di hujung bar
+    rotation: -90,         // putar 90° supaya teks menegak
+    offset: 2,
+    color: isDark ? '#e5e7eb' : '#374151',
+    font: { size: 9, weight: '600' },
+    formatter: (value) => {
+      if(value === 0 || value === null || value === undefined) return '';
+      if(typeof value === 'number'){
+        if(value >= 1000000) return 'RM '+(value/1000000).toFixed(1)+'J';
+        if(value >= 1000) return value >= 10000 ? 'RM '+(value/1000).toFixed(0)+'K' : value.toLocaleString();
+        return value % 1 === 0 ? value : value.toFixed(1);
+      }
+      return value;
+    }
+  };
+
+  // Bar mendatar: label horizontal di hujung kanan bar
+  const horizBarDatalabels = {
+    display: true,
+    anchor: 'end',
+    align: 'end',
+    rotation: 0,           // horizontal
+    offset: 4,
+    color: isDark ? '#e5e7eb' : '#374151',
+    font: { size: 9, weight: '600' },
+    formatter: (value) => {
+      if(value === 0) return '';
+      if(value >= 1000000) return 'RM '+(value/1000000).toFixed(1)+'J';
+      if(value >= 1000) return 'RM '+(value/1000).toFixed(0)+'K';
+      return value.toLocaleString();
+    }
+  };
+
+  // Bar % (ranking penyenggara)
+  const pctBarDatalabels = {
+    display: true,
+    anchor: 'end',
+    align: 'end',
+    rotation: -90,
+    offset: 2,
+    color: isDark ? '#e5e7eb' : '#374151',
+    font: { size: 9, weight: '700' },
+    formatter: (value) => value > 0 ? value+'%' : ''
+  };
+
+  // Line: label horizontal di atas titik
+  const lineDatalabels = {
+    display: true,
+    anchor: 'end',
+    align: 'top',
+    rotation: 0,           // horizontal
+    offset: 4,
+    color: isDark ? '#e5e7eb' : '#374151',
+    font: { size: 9, weight: '600' },
+    formatter: (value) => {
+      if(value === 0 || value === null || value === undefined) return '';
+      if(value >= 1000000) return 'RM '+(value/1000000).toFixed(1)+'J';
+      if(value >= 1000) return value >= 10000 ? 'RM '+(value/1000).toFixed(0)+'K' : value.toLocaleString();
+      return value % 1 === 0 ? value : value.toFixed(1);
+    }
+  };
+
+  // Pilih config datalabels berdasarkan jenis carta
+  let dlConfig;
+  if(type === 'line') {
+    dlConfig = lineDatalabels;
+  } else if(type === 'bar' && isHorizBar) {
+    dlConfig = horizBarDatalabels;
+  } else if(opts._pct) {
+    dlConfig = pctBarDatalabels;
+  } else {
+    dlConfig = barDatalabels;
+  }
+
+  // Datasets: apply datalabels ke setiap dataset
+  const ds = datasets.map(d => ({ ...d, datalabels: dlConfig }));
+
+  // Stacked bar (siap + tak siap) — label dalam bar, horizontal
+  if(opts.stacked) {
+    ds.forEach(d => {
+      d.datalabels = {
+        display: (ctx) => ctx.dataset.data[ctx.dataIndex] > 0,
+        anchor: 'center',
+        align: 'center',
+        rotation: 0,
+        color: '#fff',
+        font: { size: 9, weight: '600' },
+        formatter: (v) => v > 0 ? v : ''
+      };
+    });
+  }
+
+  charts[id] = new Chart(el, {
+    type,
+    data: { labels, datasets: ds },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: type==='bar' ? 22 : 18, right: isHorizBar ? 50 : 8 } },
+      plugins: {
+        legend: { display: opts.legend||false, labels: { color:t, font:{size:11}, usePointStyle:true } },
+        datalabels: dlConfig
+      },
+      scales: opts.scales || defS,
+      ...(opts.extra || {})
+    }
+  });
 }
 function noData(wrapId,msg='Tiada data'){
   if(charts[wrapId]){charts[wrapId].destroy();delete charts[wrapId];}
@@ -907,13 +1021,13 @@ function renderDashboard() {
   resetWrap('c-rank-maint');
   const byMP={};dv3Data.forEach(d=>{if(!byMP[d.maint])byMP[d.maint]={s:0,t:0};byMP[d.maint].s+=d.siap;byMP[d.maint].t+=d.tak;});
   const ml=Object.keys(byMP).filter(m=>byMP[m].s||byMP[m].t).sort((a,b)=>{const A=byMP[a],B=byMP[b];return((B.s+B.t)?B.s/(B.s+B.t):0)-((A.s+A.t)?A.s/(A.s+A.t):0);});
-  if(ml.length) mkChart('c-rank-maint','bar',ml,[{label:'% Siap',data:ml.map(l=>{const x=byMP[l];return(x.s+x.t)?Math.round(x.s/(x.s+x.t)*100):0;}),backgroundColor:ml.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:4}],{extra:{scales:{x:{ticks:{maxRotation:30,color:tc(),font:{size:9}},grid:{color:gc()}},y:{min:0,max:100,ticks:{callback:v=>v+'%',color:tc(),font:{size:10}},grid:{color:gc()}}}}});
+  if(ml.length) mkChart('c-rank-maint','bar',ml,[{label:'% Siap',data:ml.map(l=>{const x=byMP[l];return(x.s+x.t)?Math.round(x.s/(x.s+x.t)*100):0;}),backgroundColor:ml.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:4}],{_pct:true,extra:{scales:{x:{ticks:{maxRotation:30,color:tc(),font:{size:9}},grid:{color:gc()}},y:{min:0,max:100,ticks:{callback:v=>v+'%',color:tc(),font:{size:10}},grid:{color:gc()}}}}});
   else noData('c-rank-maint','Tiada data penyenggara');
   // C5 ranking kt
   resetWrap('c-rank-kt');
   const byKR={};ktData.forEach(d=>{if(!byKR[d.kt])byKR[d.kt]=0;byKR[d.kt]+=d.rm;});
   const ks=Object.entries(byKR).sort((a,b)=>b[1]-a[1]);
-  if(ks.length) mkChart('c-rank-kt','bar',ks.map(x=>x[0]),[{label:'RM',data:ks.map(x=>x[1]),backgroundColor:PALETTE.slice(0,ks.length),borderRadius:4}],{extra:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'RM '+Math.round(v/1000)+'K',color:tc(),font:{size:10}},grid:{color:gc()}},y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}}});
+  if(ks.length) mkChart('c-rank-kt','bar',ks.map(x=>x[0]),[{label:'RM',data:ks.map(x=>x[1]),backgroundColor:PALETTE.slice(0,ks.length),borderRadius:4}],{extra:{indexAxis:'y',layout:{padding:{top:8,right:70}},plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'RM '+Math.round(v/1000)+'K',color:tc(),font:{size:10}},grid:{color:gc()}},y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}}});
   else noData('c-rank-kt','Tiada data kontraktor');
 }
 
