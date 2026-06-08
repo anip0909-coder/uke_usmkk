@@ -66,6 +66,7 @@ select:focus{border-color:var(--primary);}
 /* METRICS */
 .metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:15px;}
 .metrics-grid-4{grid-template-columns:repeat(4,1fr);}
+.metrics-grid-5{grid-template-columns:repeat(5,1fr);}
 .metric-card{background:var(--bg1);border-radius:var(--r-lg);border:.5px solid var(--bdr);padding:15px 16px;position:relative;overflow:hidden;}
 .metric-accent{position:absolute;top:0;left:0;width:4px;height:100%;}
 .metric-label{font-size:11px;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;}
@@ -259,9 +260,9 @@ tr:hover td{background:var(--bg2);}
     <div class="filter-group"><label>Penyenggara:</label><select id="dv3-f-maint" onchange="renderDV3()"><option value="">Semua</option></select></div>
     <span class="range-badge" id="dv3-range-badge">Semua Bulan</span>
   </div>
-  <div class="metrics-grid metrics-grid-4" id="dv3-metrics"></div>
+  <div class="metrics-grid metrics-grid-5" id="dv3-metrics"></div>
   <div class="charts-grid">
-    <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-bar"></i>Prestasi Penyenggara (Siap vs Tak Siap)</div><div class="chart-wrap" style="height:220px"><canvas id="c-dv3-staff"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-bar"></i>Prestasi Penyenggara (Siap / Tak Siap / Batal)</div><div class="chart-wrap" style="height:220px"><canvas id="c-dv3-staff"></canvas></div></div>
     <div class="chart-card"><div class="chart-title"><i class="ti ti-chart-line"></i>Trend Tahunan DV3</div><div class="chart-wrap" style="height:220px"><canvas id="c-dv3-trend"></canvas></div></div>
   </div>
   <div class="table-wrap">
@@ -271,7 +272,7 @@ tr:hover td{background:var(--bg2);}
       <label>Dari Bulan:</label><select id="dv3-t-month-from" onchange="renderDV3()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="dv3-t-month-to" onchange="renderDV3()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
       <label>Tahun:</label><select id="dv3-t-year" onchange="renderDV3()"><option value="0">Semua</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select>
     </div>
-    <div class="table-scroll"><table><thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Penyenggara</th><th>Tak Siap</th><th>Siap</th><th>Jml Doket</th><th>% Siap</th><th>Tindakan</th></tr></thead><tbody id="dv3-tbody"></tbody></table></div>
+    <div class="table-scroll"><table><thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Penyenggara</th><th>Tak Siap</th><th>Siap</th><th>Batal</th><th>Jml Doket</th><th>% Siap</th><th>Tindakan</th></tr></thead><tbody id="dv3-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -387,9 +388,9 @@ const SPREADSHEET_ID = '1oPbeDl3kw_0Wo2QMLj_uspYuIi1U8FVgLWzPueZJ4mQ';
 // ─── Nama tab dalam Google Sheets ──────────────────────
 // PENTING: key mesti sama dengan nilai 'tab' yang dihantar dari dashboard
 const SHEET_NAMES = {
-  dv3:         'DV3',         // tab bernama DV3 dalam Sheets
-  ppm:         'PPM',         // tab bernama PPM dalam Sheets
-  kontraktor:  'KONTRAKTOR'   // tab bernama KONTRAKTOR dalam Sheets
+  dv3:         'DV3',         // tab DV3: Bulan,Tahun,Penyenggara,Tak Siap,Siap,Batal,Jumlah Doket
+  ppm:         'PPM',         // tab PPM: Bulan,Tahun,Penyenggara,Tak Siap,Siap,Jumlah PPM
+  kontraktor:  'KONTRAKTOR'   // tab Kontraktor: Bulan,Tahun,Kontraktor,Zon,Jumlah Doket,Jumlah RM
 };
 
 // ─── CORS headers ──────────────────────────────────────
@@ -720,6 +721,7 @@ async function fetchSheet(type, showLoad=false) {
         maint:(r['Penyenggara']||r['penyenggara']||'').trim(),
         tak:parseNum(r['Tak Siap']||r['Tak siap']||r['tak siap']),
         siap:parseNum(r['Siap']||r['siap']),
+        batal:parseNum(r['Batal']||r['batal']),
         jumlah:parseNum(r['Jumlah Doket']||r['jumlah doket'])
       }));
       console.log('DV3 data loaded:', dv3Data.length, 'rows. Sample:', dv3Data[0]);
@@ -988,7 +990,7 @@ function renderDashboard() {
   const dv3=dv3Data.filter(d=>(gy==='0'||d.tahun===gy)&&inRange(d.bulan,gF,gT));
   const ppm=ppmData.filter(d=>(gy==='0'||d.tahun===gy)&&inRange(d.bulan,gF,gT));
   const kt=ktData.filter(d=>(gy==='0'||d.tahun===gy)&&inRange(d.bulan,gF,gT));
-  const d3S=dv3.reduce((a,d)=>a+d.siap,0),d3T=dv3.reduce((a,d)=>a+d.tak,0),d3Tot=d3S+d3T;
+  const d3S=dv3.reduce((a,d)=>a+d.siap,0),d3T=dv3.reduce((a,d)=>a+d.tak,0),d3B=dv3.reduce((a,d)=>a+(d.batal||0),0),d3Tot=d3S+d3T+d3B;
   const pS=ppm.reduce((a,d)=>a+d.siap,0),pT=ppm.reduce((a,d)=>a+d.tak,0),pTot=pS+pT;
   const kRM=kt.reduce((a,d)=>a+d.rm,0),kD=kt.reduce((a,d)=>a+d.doket,0);
   const d3P=d3Tot?Math.round(d3S/d3Tot*100):0, pP=pTot?Math.round(pS/pTot*100):0;
@@ -1019,9 +1021,9 @@ function renderDashboard() {
   else noData('c-rm-line','Tiada data kontraktor');
   // C4 ranking maint
   resetWrap('c-rank-maint');
-  const byMP={};dv3Data.forEach(d=>{if(!byMP[d.maint])byMP[d.maint]={s:0,t:0};byMP[d.maint].s+=d.siap;byMP[d.maint].t+=d.tak;});
-  const ml=Object.keys(byMP).filter(m=>byMP[m].s||byMP[m].t).sort((a,b)=>{const A=byMP[a],B=byMP[b];return((B.s+B.t)?B.s/(B.s+B.t):0)-((A.s+A.t)?A.s/(A.s+A.t):0);});
-  if(ml.length) mkChart('c-rank-maint','bar',ml,[{label:'% Siap',data:ml.map(l=>{const x=byMP[l];return(x.s+x.t)?Math.round(x.s/(x.s+x.t)*100):0;}),backgroundColor:ml.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:4}],{_pct:true,extra:{scales:{x:{ticks:{maxRotation:30,color:tc(),font:{size:9}},grid:{color:gc()}},y:{min:0,max:100,ticks:{callback:v=>v+'%',color:tc(),font:{size:10}},grid:{color:gc()}}}}});
+  const byMP={};dv3Data.forEach(d=>{if(!byMP[d.maint])byMP[d.maint]={s:0,t:0,b:0};byMP[d.maint].s+=d.siap;byMP[d.maint].t+=d.tak;byMP[d.maint].b+=(d.batal||0);});
+  const ml=Object.keys(byMP).filter(m=>byMP[m].s||byMP[m].t||byMP[m].b).sort((a,b)=>{const A=byMP[a],B=byMP[b];const pA=(A.s+A.t+A.b)?A.s/(A.s+A.t+A.b):0;const pB=(B.s+B.t+B.b)?B.s/(B.s+B.t+B.b):0;return pB-pA;});
+  if(ml.length) mkChart('c-rank-maint','bar',ml,[{label:'% Siap',data:ml.map(l=>{const x=byMP[l];return(x.s+x.t+x.b)?Math.round(x.s/(x.s+x.t+x.b)*100):0;}),backgroundColor:ml.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:4}],{_pct:true,extra:{scales:{x:{ticks:{maxRotation:30,color:tc(),font:{size:9}},grid:{color:gc()}},y:{min:0,max:100,ticks:{callback:v=>v+'%',color:tc(),font:{size:10}},grid:{color:gc()}}}}});
   else noData('c-rank-maint','Tiada data penyenggara');
   // C5 ranking kt
   resetWrap('c-rank-kt');
@@ -1040,17 +1042,18 @@ function renderDV3() {
   const mnt=gv('dv3-f-maint').value;
   updateBadge('dv3-range-badge', mF, mT);
   const data=dv3Data.filter(d=>(y==='0'||d.tahun===y)&&inRange(d.bulan,mF,mT)&&(!mnt||d.maint===mnt));
-  const jS=data.reduce((a,d)=>a+d.siap,0),jT=data.reduce((a,d)=>a+d.tak,0),jTot=jS+jT,pct=jTot?Math.round(jS/jTot*100):0;
+  const jS=data.reduce((a,d)=>a+d.siap,0),jT=data.reduce((a,d)=>a+d.tak,0),jB=data.reduce((a,d)=>a+(d.batal||0),0),jTot=jS+jT+jB,pct=jTot?Math.round(jS/jTot*100):0;
   gv('dv3-metrics').innerHTML=metricCards([
     {c:'#1a56db',l:'Jumlah Doket',v:jTot},
     {c:'#0e9f6e',l:'Siap',v:jS,vc:'#0e9f6e'},
     {c:'#e02424',l:'Tak Siap',v:jT,vc:'#e02424'},
+    {c:'#7e3af2',l:'Batal',v:jB,vc:'#7e3af2'},
     {c:'#c27803',l:'% Siap',v:pct+'%'}
   ]);
   resetWrap('c-dv3-staff');resetWrap('c-dv3-trend');
-  const byM={};data.forEach(d=>{if(!byM[d.maint])byM[d.maint]={s:0,t:0};byM[d.maint].s+=d.siap;byM[d.maint].t+=d.tak;});
-  const ls=Object.keys(byM).filter(k=>byM[k].s||byM[k].t);
-  if(ls.length) mkChart('c-dv3-staff','bar',ls,[{label:'Siap',data:ls.map(l=>byM[l].s),backgroundColor:'#0e9f6e',borderRadius:3},{label:'Tak Siap',data:ls.map(l=>byM[l].t),backgroundColor:'#e02424',borderRadius:3}],{legend:true,scales:{x:{ticks:{maxRotation:30,color:tc(),font:{size:9}},grid:{color:gc()}},y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}});
+  const byM={};data.forEach(d=>{if(!byM[d.maint])byM[d.maint]={s:0,t:0,b:0};byM[d.maint].s+=d.siap;byM[d.maint].t+=d.tak;byM[d.maint].b+=(d.batal||0);});
+  const ls=Object.keys(byM).filter(k=>byM[k].s||byM[k].t||byM[k].b);
+  if(ls.length) mkChart('c-dv3-staff','bar',ls,[{label:'Siap',data:ls.map(l=>byM[l].s),backgroundColor:'#0e9f6e',borderRadius:3},{label:'Tak Siap',data:ls.map(l=>byM[l].t),backgroundColor:'#e02424',borderRadius:3},{label:'Batal',data:ls.map(l=>byM[l].b),backgroundColor:'#7e3af2',borderRadius:3}],{legend:true,scales:{x:{ticks:{maxRotation:30,color:tc(),font:{size:9}},grid:{color:gc()}},y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}});
   else noData('c-dv3-staff','Tiada data');
   const byY={};dv3Data.forEach(d=>{if(!byY[d.tahun])byY[d.tahun]=0;byY[d.tahun]+=d.siap+d.tak;});
   const yl=Object.keys(byY).sort();
@@ -1060,7 +1063,7 @@ function renderDV3() {
   const ty=gv('dv3-t-year').value,tm=gv('dv3-t-maint').value;
   const tmF=gv('dv3-t-month-from')?.value||mF, tmT=gv('dv3-t-month-to')?.value||mT;
   const td=dv3Data.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,tmF,tmT)&&(!tm||d.maint===tm));
-  gv('dv3-tbody').innerHTML=td.length ? td.map((d,i)=>pctRow([i+1,d.bulan,d.tahun,`<b>${d.maint}</b>`,d.tak,d.siap,d.siap+d.tak],d.siap,d.tak,'dv3',d.id)).join('') : emptyTr(9);
+  gv('dv3-tbody').innerHTML=td.length ? td.map((d,i)=>pctRow([i+1,d.bulan,d.tahun,`<b>${d.maint}</b>`,d.tak,d.siap,d.batal||0,d.jumlah||(d.siap+d.tak+(d.batal||0))],d.siap,d.tak,d.batal||0,'dv3',d.id)).join('') : emptyTr(10);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1125,11 +1128,17 @@ function renderKontraktor() {
 // ═══════════════════════════════════════════════════════
 // TABLE HELPERS
 // ═══════════════════════════════════════════════════════
-function pctRow(cells, siap, tak, type, id) {
-  const tot=siap+tak, p=tot?Math.round(siap/tot*100):0, col=p>=80?'#0e9f6e':p>=50?'#c27803':'#e02424';
+function pctRow(cells, siap, tak, batalOrType, typeOrId, idOrUndef, batalAlt) {
+  // Signature lama: (cells,siap,tak,type,id) — PPM/KT
+  // Signature baru: (cells,siap,tak,batal,type,id) — DV3
+  let batal=0, type, id;
+  if(typeof batalOrType==='number'){batal=batalOrType;type=typeOrId;id=idOrUndef;}
+  else{type=batalOrType;id=typeOrId;}
+  const tot=siap+tak+batal, p=tot?Math.round(siap/tot*100):0, col=p>=80?'#0e9f6e':p>=50?'#c27803':'#e02424';
   const tds = cells.map((c,i)=>{
-    if(i===4) return `<td style="color:#e02424;font-weight:600">${c}</td>`;
-    if(i===5) return `<td style="color:#0e9f6e;font-weight:600">${c}</td>`;
+    if(i===4) return `<td style="color:#e02424;font-weight:600">${c}</td>`; // Tak Siap
+    if(i===5) return `<td style="color:#0e9f6e;font-weight:600">${c}</td>`; // Siap
+    if(i===6&&batal!==undefined&&type==='dv3') return `<td style="color:#7e3af2;font-weight:600">${c}</td>`; // Batal
     if(i===0) return `<td style="color:var(--txt2)">${c}</td>`;
     return `<td>${c}</td>`;
   }).join('');
@@ -1156,6 +1165,7 @@ function editRow(type,id){
     h+=field('Penyenggara',`<input type="text" id="m-maint" value="${rec.maint}">`);
     h+=field('Siap',`<input type="number" id="m-siap" value="${rec.siap}" min="0">`);
     h+=field('Tak Siap',`<input type="number" id="m-tak" value="${rec.tak}" min="0">`);
+    if(type==='dv3') h+=field('Batal',`<input type="number" id="m-batal" value="${rec.batal||0}" min="0">`);
   } else {
     h+=field('Kontraktor',`<input type="text" id="m-kt" value="${rec.kt}">`);
     h+=field('Zon',`<select id="m-zon"><option value="Kampus">Kampus</option><option value="Hospital">Hospital</option></select>`);
@@ -1178,6 +1188,7 @@ function openAddModal(type){
     h+=field('Penyenggara',`<input type="text" id="m-maint" list="ml-${type}" placeholder="Nama"><datalist id="ml-${type}">${maints.map(m=>`<option>${m}</option>`).join('')}</datalist>`);
     h+=field('Siap',`<input type="number" id="m-siap" value="0" min="0">`);
     h+=field('Tak Siap',`<input type="number" id="m-tak" value="0" min="0">`);
+    if(type==='dv3') h+=field('Batal',`<input type="number" id="m-batal" value="0" min="0">`);
   } else {
     const kts=[...new Set(ktData.map(d=>d.kt))].sort();
     h+=field('Kontraktor',`<input type="text" id="m-kt" list="ml-kt" placeholder="Nama"><datalist id="ml-kt">${kts.map(k=>`<option>${k}</option>`).join('')}</datalist>`);
@@ -1201,8 +1212,10 @@ async function saveModal(){
   let rowArr=[], rec={id:mode==='edit'?id:uid(), _row, bulan, tahun};
   if(type==='dv3'||type==='ppm'){
     rec.maint=gv('m-maint')?.value||'';
-    rec.siap=+gv('m-siap')?.value||0; rec.tak=+gv('m-tak')?.value||0; rec.jumlah=rec.siap+rec.tak;
-    rowArr=[bulan,tahun,rec.maint,rec.tak,rec.siap,rec.jumlah];
+    rec.siap=+gv('m-siap')?.value||0; rec.tak=+gv('m-tak')?.value||0;
+    rec.batal=type==='dv3'?(+gv('m-batal')?.value||0):0;
+    rec.jumlah=rec.siap+rec.tak+rec.batal;
+    rowArr=type==='dv3'?[bulan,tahun,rec.maint,rec.tak,rec.siap,rec.batal,rec.jumlah]:[bulan,tahun,rec.maint,rec.tak,rec.siap,rec.jumlah];
   } else {
     rec.kt=gv('m-kt')?.value||''; rec.zon=gv('m-zon')?.value||'';
     rec.doket=+gv('m-doket')?.value||0; rec.rm=+gv('m-rm')?.value||0;
