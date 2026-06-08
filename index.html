@@ -268,7 +268,7 @@ tr:hover td{background:var(--bg2);}
     <div class="table-header"><span><i class="ti ti-table" style="vertical-align:-2px;margin-right:6px"></i>Rekod DV3</span><button class="btn btn-primary" onclick="openAddModal('dv3')"><i class="ti ti-plus"></i> Tambah</button></div>
     <div class="table-sub">
       <label>Penyenggara:</label><select id="dv3-t-maint" onchange="renderDV3()"><option value="">Semua</option></select>
-      <label>Dari Bulan:</label><select id="dv3-f-month-from" onchange="renderDV3()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="dv3-f-month-to" onchange="renderDV3()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
+      <label>Dari Bulan:</label><select id="dv3-t-month-from" onchange="renderDV3()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="dv3-t-month-to" onchange="renderDV3()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
       <label>Tahun:</label><select id="dv3-t-year" onchange="renderDV3()"><option value="0">Semua</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select>
     </div>
     <div class="table-scroll"><table><thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Penyenggara</th><th>Tak Siap</th><th>Siap</th><th>Jml Doket</th><th>% Siap</th><th>Tindakan</th></tr></thead><tbody id="dv3-tbody"></tbody></table></div>
@@ -301,7 +301,7 @@ tr:hover td{background:var(--bg2);}
     <div class="table-header"><span><i class="ti ti-table" style="vertical-align:-2px;margin-right:6px"></i>Rekod PPM</span><button class="btn btn-primary" onclick="openAddModal('ppm')"><i class="ti ti-plus"></i> Tambah</button></div>
     <div class="table-sub">
       <label>Penyenggara:</label><select id="ppm-t-maint" onchange="renderPPM()"><option value="">Semua</option></select>
-      <label>Dari Bulan:</label><select id="ppm-f-month-from" onchange="renderPPM()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="ppm-f-month-to" onchange="renderPPM()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
+      <label>Dari Bulan:</label><select id="ppm-t-month-from" onchange="renderPPM()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="ppm-t-month-to" onchange="renderPPM()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
       <label>Tahun:</label><select id="ppm-t-year" onchange="renderPPM()"><option value="0">Semua</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select>
     </div>
     <div class="table-scroll"><table><thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Penyenggara</th><th>Tak Siap</th><th>Siap</th><th>Jml PPM</th><th>% Siap</th><th>Tindakan</th></tr></thead><tbody id="ppm-tbody"></tbody></table></div>
@@ -335,7 +335,7 @@ tr:hover td{background:var(--bg2);}
     <div class="table-header"><span><i class="ti ti-table" style="vertical-align:-2px;margin-right:6px"></i>Rekod Kontraktor</span><button class="btn btn-primary" onclick="openAddModal('kontraktor')"><i class="ti ti-plus"></i> Tambah</button></div>
     <div class="table-sub">
       <label>Kontraktor:</label><select id="kt-t-kt" onchange="renderKontraktor()"><option value="">Semua</option></select>
-      <label>Dari Bulan:</label><select id="kt-f-month-from" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="kt-f-month-to" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
+      <label>Dari Bulan:</label><select id="kt-t-month-from" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select><span class="range-sep">→</span><label>Hingga:</label><select id="kt-t-month-to" onchange="renderKontraktor()"><option value="0">Semua</option><option>Jan</option><option>Feb</option><option>Mac</option><option>April</option><option>Mei</option><option>Jun</option><option>Jul</option><option>Ogos</option><option>Sept</option><option>Okt</option><option>Nov</option><option>Dis</option></select>
       <label>Tahun:</label><select id="kt-t-year" onchange="renderKontraktor()"><option value="0">Semua</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option></select>
     </div>
     <div class="table-scroll"><table><thead><tr><th>#</th><th>Bulan</th><th>Tahun</th><th>Kontraktor</th><th>Zon</th><th>Jml Doket</th><th>Jumlah RM</th><th>Tindakan</th></tr></thead><tbody id="kt-tbody"></tbody></table></div>
@@ -1058,7 +1058,8 @@ function renderDV3() {
   else noData('c-dv3-trend','Tiada data');
   // table
   const ty=gv('dv3-t-year').value,tm=gv('dv3-t-maint').value;
-  const td=dv3Data.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,mF,mT)&&(!tm||d.maint===tm));
+  const tmF=gv('dv3-t-month-from')?.value||mF, tmT=gv('dv3-t-month-to')?.value||mT;
+  const td=dv3Data.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,tmF,tmT)&&(!tm||d.maint===tm));
   gv('dv3-tbody').innerHTML=td.length ? td.map((d,i)=>pctRow([i+1,d.bulan,d.tahun,`<b>${d.maint}</b>`,d.tak,d.siap,d.siap+d.tak],d.siap,d.tak,'dv3',d.id)).join('') : emptyTr(9);
 }
 
@@ -1088,7 +1089,8 @@ function renderPPM() {
   if(bl.length) mkChart('c-ppm-trend','line',bl,[{label:'PPM',data:bl.map(b=>byB[b]),borderColor:'#7e3af2',backgroundColor:'rgba(126,58,242,0.1)',fill:true,tension:0.4,pointRadius:4}],{extra:{scales:{y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}},x:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}}});
   else noData('c-ppm-trend','Tiada data');
   const ty=gv('ppm-t-year').value,tm=gv('ppm-t-maint').value;
-  const td=ppmData.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,mF,mT)&&(!tm||d.maint===tm));
+  const tmF=gv('ppm-t-month-from')?.value||mF, tmT=gv('ppm-t-month-to')?.value||mT;
+  const td=ppmData.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,tmF,tmT)&&(!tm||d.maint===tm));
   gv('ppm-tbody').innerHTML=td.length ? td.map((d,i)=>pctRow([i+1,d.bulan,d.tahun,`<b>${d.maint}</b>`,d.tak,d.siap,d.siap+d.tak],d.siap,d.tak,'ppm',d.id)).join('') : emptyTr(9);
 }
 
@@ -1115,7 +1117,8 @@ function renderKontraktor() {
     mkChart('c-kt-rm','bar',kl,[{label:'RM',data:kl.map(l=>byKt[l].rm),backgroundColor:PALETTE,borderRadius:4}],{extra:{scales:{x:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}},y:{ticks:{callback:v=>'RM '+Math.round(v/1000)+'K',color:tc(),font:{size:10}},grid:{color:gc()}}}}});
   } else { noData('c-kt-doket','Tiada data'); noData('c-kt-rm','Tiada data'); }
   const ty=gv('kt-t-year').value,tkt=gv('kt-t-kt').value;
-  const td=ktData.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,mF,mT)&&(!tkt||d.kt===tkt));
+  const tmF=gv('kt-t-month-from')?.value||mF, tmT=gv('kt-t-month-to')?.value||mT;
+  const td=ktData.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,tmF,tmT)&&(!tkt||d.kt===tkt));
   gv('kt-tbody').innerHTML=td.length ? td.map((d,i)=>`<tr><td style="color:var(--txt2)">${i+1}</td><td>${d.bulan}</td><td>${d.tahun}</td><td><b>${d.kt}</b></td><td>${d.zon}</td><td style="font-weight:600">${d.doket}</td><td style="font-weight:600;color:#0694a2">RM ${d.rm.toLocaleString()}</td><td><button class="btn-sm" onclick="editRow('kt','${d.id}')"><i class="ti ti-edit"></i></button> <button class="btn-sm btn-del" onclick="delRow('kt','${d.id}')"><i class="ti ti-trash"></i></button></td></tr>`).join('') : emptyTr(8);
 }
 
