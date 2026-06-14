@@ -134,8 +134,8 @@ tr:hover td{background:var(--bg2);}
 .settings-row label{font-size:13px;color:var(--txt2);font-weight:500;padding-top:8px;flex-shrink:0;}
 .settings-row input[type=text],.settings-row input[type=url]{font-size:13px;padding:7px 11px;border-radius:var(--r-md);border:.5px solid var(--bdr2);background:var(--bg2);color:var(--txt1);width:100%;max-width:340px;outline:none;}
 .settings-row input:focus{border-color:var(--primary);}
-.toggle-group{display:flex;gap:6px;}
-.toggle-btn{font-size:12px;padding:6px 14px;border-radius:var(--r-md);cursor:pointer;border:.5px solid var(--bdr2);background:var(--bg2);color:var(--txt2);font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.toggle-group{display:flex;gap:4px;}
+.toggle-btn{font-size:12px;padding:5px 8px;border-radius:var(--r-md);cursor:pointer;border:.5px solid var(--bdr2);background:var(--bg2);color:var(--txt2);font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
 .toggle-btn.active{background:var(--primary-light);color:var(--primary);border-color:var(--primary);}
 /* STEPS */
 .steps{counter-reset:step;list-style:none;padding:0;}
@@ -187,8 +187,15 @@ tr:hover td{background:var(--bg2);}
     <span class="topbar-title" id="sys-title">Sistem Pemantauan Prestasi – Unit Kejuruteraan Elektrik</span>
   </div>
   <div class="topbar-right">
+    <!-- TEMA CERAH/GELAP -->
+    <div class="toggle-group" style="margin-right: 6px;">
+      <button class="toggle-btn active" id="mode-light" onclick="setMode('light')" title="Mode Cerah"><i class="ti ti-sun"></i></button>
+      <button class="toggle-btn" id="mode-dark" onclick="setMode('dark')" title="Mode Gelap"><i class="ti ti-moon"></i></button>
+    </div>
+    
     <span id="global-badge" class="sync-badge sb-wait"><i class="ti ti-refresh spin"></i> Memuatkan</span>
     <button class="btn" onclick="refreshAll()"><i class="ti ti-refresh" id="rfr-icon"></i> Refresh</button>
+    
     <div class="topbar-filters">
       <label>Bulan:</label>
       <span style="font-size:11px;color:var(--txt2);">Dari:</span>
@@ -526,16 +533,6 @@ function getSheet(tab) {
       <button class="btn btn-primary" onclick="saveSettings()"><i class="ti ti-device-floppy"></i> Simpan</button>
     </div>
 
-    <div class="settings-section">
-      <div class="settings-title"><i class="ti ti-sun"></i>Mode Paparan</div>
-      <div class="settings-row"><label>Tema</label>
-        <div class="toggle-group">
-          <button class="toggle-btn active" id="mode-light" onclick="setMode('light')"><i class="ti ti-sun"></i> Cerah</button>
-          <button class="toggle-btn" id="mode-dark" onclick="setMode('dark')"><i class="ti ti-moon"></i> Gelap</button>
-        </div>
-      </div>
-    </div>
-
   </div><!-- /settings-wrap -->
 </div><!-- /tab-tetapan -->
 
@@ -624,26 +621,24 @@ function parseNum(val) {
 
 async function fetchCSV(gid) {
   const csvUrl = `https://docs.google.com/spreadsheets/d/${CFG.sheetId}/export?format=csv&gid=${gid}`;
-  // Guna beberapa proxy sebagai fallback
-  const proxies = [
-    `https://api.allorigins.win/get?url=${encodeURIComponent(csvUrl)}`,
+  const gvizUrl = `https://docs.google.com/spreadsheets/d/${CFG.sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+  
+  // Guna direct gviz dan beberapa proxy sebagai fallback
+  const endpoints = [
+    gvizUrl, // Cuba direct CORS (Google Viz API) terlebih dahulu
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(csvUrl)}`,
     `https://corsproxy.io/?${encodeURIComponent(csvUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`
   ];
   let lastErr;
-  for (const proxy of proxies) {
+  for (const url of endpoints) {
     try {
-      const res = await fetch(proxy, { signal: AbortSignal.timeout(10000) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
       if (!res.ok) continue;
-      // allorigins wraps in JSON; corsproxy returns raw
-      if (proxy.includes('allorigins')) {
-        const j = await res.json();
-        return j.contents;
-      } else {
-        return await res.text();
-      }
+      return await res.text();
     } catch(e) { lastErr = e; }
   }
-  throw new Error('Semua proxy gagal: ' + lastErr?.message);
+  throw new Error('Semua endpoint/proxy gagal: ' + lastErr?.message);
 }
 
 function parseCSV(text) {
@@ -714,16 +709,22 @@ async function fetchSheet(type, showLoad=false) {
     const rows = parseCSV(text);
     let count = 0;
     if (type === 'dv3') {
-      dv3Data = rows.filter(r=>r['Penyenggara']||r['penyenggara']).map(r=>({
-        id:uid(), _row:r._row,
-        bulan:(r['Bulan']||r['bulan']||'').trim(),
-        tahun:(r['Tahun']||r['tahun']||'').toString().trim(),
-        maint:(r['Penyenggara']||r['penyenggara']||'').trim(),
-        tak:parseNum(r['Tak Siap']||r['Tak siap']||r['tak siap']),
-        siap:parseNum(r['Siap']||r['siap']),
-        batal:parseNum(r['Batal']||r['batal']),
-        jumlah:parseNum(r['Jumlah Doket']||r['jumlah doket'])
-      }));
+      dv3Data = rows.filter(r=>r['Penyenggara']||r['penyenggara']).map(r=>{
+        // Kiraan rasmi Jumlah Doket untuk DV3
+        const tak = parseNum(r['Tak Siap']||r['Tak siap']||r['tak siap']);
+        const siap = parseNum(r['Siap']||r['siap']);
+        const batal = parseNum(r['Batal']||r['batal']);
+        return {
+          id:uid(), _row:r._row,
+          bulan:(r['Bulan']||r['bulan']||'').trim(),
+          tahun:(r['Tahun']||r['tahun']||'').toString().trim(),
+          maint:(r['Penyenggara']||r['penyenggara']||'').trim(),
+          tak: tak,
+          siap: siap,
+          batal: batal,
+          jumlah: (tak + siap + batal) // Enforce pengiraan sebenar
+        };
+      });
       console.log('DV3 data loaded:', dv3Data.length, 'rows. Sample:', dv3Data[0]);
       count = dv3Data.length;
       populateSel('dv3');
@@ -1003,7 +1004,7 @@ function renderDashboard() {
     <div class="metric-card"><div class="metric-accent" style="background:#0694a2"></div><div class="metric-label">Nilai RM Kontraktor</div><div class="metric-value" style="font-size:20px">RM ${kRM.toLocaleString()}</div><span class="metric-badge badge-warn">Terkumpul</span></div>`;
   // C1 DV3/year
   resetWrap('c-dv3-bar');
-  const byYD={};dv3Data.forEach(d=>{if(!byYD[d.tahun])byYD[d.tahun]=0;byYD[d.tahun]+=d.siap+d.tak;});
+  const byYD={};dv3Data.forEach(d=>{if(!byYD[d.tahun])byYD[d.tahun]=0;byYD[d.tahun]+=d.siap+d.tak+d.batal;});
   const yl=Object.keys(byYD).sort();
   if(yl.length) mkChart('c-dv3-bar','bar',yl,[{label:'Doket DV3',data:yl.map(y=>byYD[y]),backgroundColor:'#1a56db',borderRadius:4}]);
   else noData('c-dv3-bar','Tiada data DV3');
@@ -1055,7 +1056,7 @@ function renderDV3() {
   const ls=Object.keys(byM).filter(k=>byM[k].s||byM[k].t||byM[k].b);
   if(ls.length) mkChart('c-dv3-staff','bar',ls,[{label:'Siap',data:ls.map(l=>byM[l].s),backgroundColor:'#0e9f6e',borderRadius:3},{label:'Tak Siap',data:ls.map(l=>byM[l].t),backgroundColor:'#e02424',borderRadius:3},{label:'Batal',data:ls.map(l=>byM[l].b),backgroundColor:'#7e3af2',borderRadius:3}],{legend:true,scales:{x:{ticks:{maxRotation:30,color:tc(),font:{size:9}},grid:{color:gc()}},y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}});
   else noData('c-dv3-staff','Tiada data');
-  const byY={};dv3Data.forEach(d=>{if(!byY[d.tahun])byY[d.tahun]=0;byY[d.tahun]+=d.siap+d.tak;});
+  const byY={};dv3Data.forEach(d=>{if(!byY[d.tahun])byY[d.tahun]=0;byY[d.tahun]+=d.siap+d.tak+d.batal;});
   const yl=Object.keys(byY).sort();
   if(yl.length) mkChart('c-dv3-trend','line',yl,[{label:'Doket',data:yl.map(y=>byY[y]),borderColor:'#1a56db',backgroundColor:'rgba(26,86,219,0.1)',fill:true,tension:0.4,pointRadius:4}],{extra:{scales:{y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}},x:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()}}}}});
   else noData('c-dv3-trend','Tiada data');
@@ -1063,7 +1064,7 @@ function renderDV3() {
   const ty=gv('dv3-t-year').value,tm=gv('dv3-t-maint').value;
   const tmF=gv('dv3-t-month-from')?.value||mF, tmT=gv('dv3-t-month-to')?.value||mT;
   const td=dv3Data.filter(d=>(ty==='0'||d.tahun===ty)&&inRange(d.bulan,tmF,tmT)&&(!tm||d.maint===tm));
-  gv('dv3-tbody').innerHTML=td.length ? td.map((d,i)=>pctRow([i+1,d.bulan,d.tahun,`<b>${d.maint}</b>`,d.tak,d.siap,d.batal||0,d.jumlah||(d.siap+d.tak+(d.batal||0))],d.siap,d.tak,d.batal||0,'dv3',d.id)).join('') : emptyTr(10);
+  gv('dv3-tbody').innerHTML=td.length ? td.map((d,i)=>pctRow([i+1,d.bulan,d.tahun,`<b>${d.maint}</b>`,d.tak,d.siap,d.batal||0,d.jumlah],d.siap,d.tak,d.batal||0,'dv3',d.id)).join('') : emptyTr(10);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1163,8 +1164,8 @@ function editRow(type,id){
   let h=bulanTahunFields();
   if(type==='dv3'||type==='ppm'){
     h+=field('Penyenggara',`<input type="text" id="m-maint" value="${rec.maint}">`);
-    h+=field('Siap',`<input type="number" id="m-siap" value="${rec.siap}" min="0">`);
     h+=field('Tak Siap',`<input type="number" id="m-tak" value="${rec.tak}" min="0">`);
+    h+=field('Siap',`<input type="number" id="m-siap" value="${rec.siap}" min="0">`);
     if(type==='dv3') h+=field('Batal',`<input type="number" id="m-batal" value="${rec.batal||0}" min="0">`);
   } else {
     h+=field('Kontraktor',`<input type="text" id="m-kt" value="${rec.kt}">`);
@@ -1186,8 +1187,8 @@ function openAddModal(type){
     const arr=type==='dv3'?dv3Data:ppmData;
     const maints=[...new Set(arr.map(d=>d.maint))].sort();
     h+=field('Penyenggara',`<input type="text" id="m-maint" list="ml-${type}" placeholder="Nama"><datalist id="ml-${type}">${maints.map(m=>`<option>${m}</option>`).join('')}</datalist>`);
-    h+=field('Siap',`<input type="number" id="m-siap" value="0" min="0">`);
     h+=field('Tak Siap',`<input type="number" id="m-tak" value="0" min="0">`);
+    h+=field('Siap',`<input type="number" id="m-siap" value="0" min="0">`);
     if(type==='dv3') h+=field('Batal',`<input type="number" id="m-batal" value="0" min="0">`);
   } else {
     const kts=[...new Set(ktData.map(d=>d.kt))].sort();
@@ -1210,39 +1211,51 @@ async function saveModal(){
   btn.disabled=true; btn.innerHTML='<i class="ti ti-refresh spin"></i> Menyimpan...';
   const bulan=gv('m-bulan').value, tahun=gv('m-tahun').value;
   let rowArr=[], rec={id:mode==='edit'?id:uid(), _row, bulan, tahun};
+  
   if(type==='dv3'||type==='ppm'){
     rec.maint=gv('m-maint')?.value||'';
-    rec.siap=+gv('m-siap')?.value||0; rec.tak=+gv('m-tak')?.value||0;
+    rec.tak=+gv('m-tak')?.value||0; 
+    rec.siap=+gv('m-siap')?.value||0; 
     rec.batal=type==='dv3'?(+gv('m-batal')?.value||0):0;
-    rec.jumlah=rec.siap+rec.tak+rec.batal;
+    rec.jumlah=rec.tak+rec.siap+rec.batal;
+    // Tepat kepada susunan: Bulan, Tahun, Penyenggara, Tak Siap, Siap, Batal, Jumlah Doket
     rowArr=type==='dv3'?[bulan,tahun,rec.maint,rec.tak,rec.siap,rec.batal,rec.jumlah]:[bulan,tahun,rec.maint,rec.tak,rec.siap,rec.jumlah];
   } else {
     rec.kt=gv('m-kt')?.value||''; rec.zon=gv('m-zon')?.value||'';
     rec.doket=+gv('m-doket')?.value||0; rec.rm=+gv('m-rm')?.value||0;
     rowArr=[bulan,tahun,rec.kt,rec.zon,rec.doket,rec.rm];
   }
-  // Simpan tempatan
+  
+  // Simpan tempatan untuk paparan pantas
   const arr=type==='dv3'?dv3Data:type==='ppm'?ppmData:ktData;
   if(mode==='edit'){ const i=arr.findIndex(d=>d.id===id); if(i>=0) arr[i]={...arr[i],...rec}; }
   else arr.push(rec);
+  
   // Sync ke Sheets
   let extra='';
   if(CFG.scriptUrl){
-    const tabKey = type; // dv3, ppm, kontraktor — mesti sama dengan SHEET_NAMES dalam Apps Script
+    const tabKey = type;
     const params = {
       action:   (mode==='edit' && _row) ? 'update' : 'append',
       tab:      tabKey,
       row:      JSON.stringify(rowArr)
     };
     if(mode==='edit' && _row) params.rowIndex = _row;
+    
     console.log('Sync ke Sheets:', params);
     const res=await callScript(params);
     console.log('Sheets response:', res);
     extra = res?.status==='ok' ? ' · Sheets ✓' : ` · Sheets gagal: ${res?.msg||'tiada response'}`;
+    
+    // Tarik Semula (Re-fetch) supaya indeks _row setiasa up-to-date selepas Google Sheet tambah/ubah kedudukan
+    if (res?.status==='ok') {
+        await fetchSheet(type, false);
+    }
   }
+  
   btn.disabled=false; btn.innerHTML='<i class="ti ti-device-floppy"></i> Simpan';
   closeModal(); showToast('Rekod disimpan'+extra, extra.includes('✓')?'ok':'warn');
-  // populateSel: kontraktor type -> key 'kt', lain ikut terus
+  
   populateSel(type==='kontraktor'?'kt':type);
   if(type==='dv3') renderDV3();
   else if(type==='ppm') renderPPM();
@@ -1254,16 +1267,27 @@ async function delRow(type,id){
   const arr=type==='dv3'?dv3Data:type==='ppm'?ppmData:ktData;
   const rec=arr.find(d=>d.id===id);
   if(!confirm('Padam rekod ini? Tindakan ini tidak boleh dibatalkan.')) return;
+  
+  // Update temapatan
   if(type==='dv3') dv3Data=dv3Data.filter(d=>d.id!==id);
   else if(type==='ppm') ppmData=ppmData.filter(d=>d.id!==id);
   else ktData=ktData.filter(d=>d.id!==id);
+  
   let extra='';
   if(CFG.scriptUrl && rec?._row){
-    // type sudah betul: 'dv3', 'ppm', atau 'kontraktor' — sama dengan SHEET_NAMES
+    showOverlay('Memadam data...', 'Menyambung ke Google Sheets');
     const res=await callScript({action:'delete', tab:type, rowIndex:rec._row});
     console.log('delRow Sheets response:', res);
     extra = res?.status==='ok' ? ' · Dipadam dari Sheets ✓' : ` · Sheets gagal: ${res?.msg||''}`;
+    
+    // Tarik semula indeks dari sheet lepas pemadaman 
+    // jika tidak, edit pada item di bawah baris dipadam tadi akan rosak kerana anjakan (_row)
+    if (res?.status==='ok') {
+        await fetchSheet(type, false);
+    }
+    hideOverlay();
   }
+  
   if(type==='dv3') renderDV3();
   else if(type==='ppm') renderPPM();
   else renderKontraktor();
