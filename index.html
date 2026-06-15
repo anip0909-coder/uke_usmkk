@@ -56,23 +56,10 @@
       return icons[name] || null;
     };
 
-    // --- Helper: Parsing CSV ---
-    const parseCSV = (csvText) => {
-      const lines = csvText.split('\n').filter(line => line.trim() !== '');
-      if (lines.length < 2) return [];
-      
-      const headers = lines[0].split(',').map(h => h.trim().replace(/['"]+/g, ''));
-      return lines.slice(1).map((line, index) => {
-        const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/['"]+/g, ''));
-        let obj = { id: `row-${Date.now()}-${index}` }; // Unique ID for editing
-        headers.forEach((h, i) => {
-          let val = values[i];
-          if (!isNaN(val) && val !== '') val = Number(val);
-          obj[h] = val;
-        });
-        return obj;
-      });
-    };
+    // =========================================================================
+    // SANGAT PENTING: TUKAR URL INI KEPADA URL WEB APP APPS SCRIPT ANDA
+    // =========================================================================
+    const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbytiLV-DMFyvOVEjAXC0lnoMiuIy79-OkOlOCk_sEWuiO-mDWPZgd8EzAAxL54sPL4b/exec";
 
     const SenaraiBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
 
@@ -94,30 +81,29 @@
         tabKontraktor: "Kontraktor"
       });
 
-      // --- Fetch Data ---
+      // --- Fetch Data dari Google Apps Script API ---
       useEffect(() => {
         const fetchData = async () => {
+          if (!APPSCRIPT_URL || APPSCRIPT_URL.includes("MASUKKAN_URL")) {
+             setError("Sila masukkan URL Web App Apps Script pada pembolehubah APPSCRIPT_URL di dalam fail index.html");
+             setLoading(false);
+             return;
+          }
+          
           setLoading(true);
           try {
-            const baseUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSVUEkRsAwWAUURHfvVWpxsv_366BZq8Ed1fyCYvwXwyJoTYHFg3oJrn6d-pEYfXhUXfKhXOYiNlaaV/pub?output=csv';
-            
-            const [resDv3, resPpm, resKon] = await Promise.all([
-              fetch(`${baseUrl}&gid=2136024607`),
-              fetch(`${baseUrl}&gid=1093378707`),
-              fetch(`${baseUrl}&gid=0`)
-            ]);
+            const res = await fetch(`${APPSCRIPT_URL}?action=getData`);
+            const result = await res.json();
 
-            const textDv3 = await resDv3.text();
-            const textPpm = await resPpm.text();
-            const textKon = await resKon.text();
+            if(result.error) throw new Error(result.error);
 
-            setDv3Data(parseCSV(textDv3));
-            setPpmData(parseCSV(textPpm));
-            setKontraktorData(parseCSV(textKon));
+            setDv3Data(result.dv3 || []);
+            setPpmData(result.ppm || []);
+            setKontraktorData(result.kon || []);
             setError(null);
           } catch (err) {
-            console.error("Ralat mengambil data dari Google Sheets:", err);
-            setError("Gagal memuat turun data. Sila pastikan pautan Google Sheet boleh diakses secara awam.");
+            console.error("Ralat mengambil data dari Apps Script:", err);
+            setError("Gagal memuat turun data. Sila pastikan Apps Script URL betul dan disiarkan sebagai 'Anyone'.");
           } finally {
             setLoading(false);
           }
@@ -144,11 +130,45 @@
         { id: 'tetapan', label: 'Tetapan', icon: 'Settings' },
       ];
 
+      // --- Logik Pengemaskinian Data ke Apps Script ---
+      const updateSheetData = async (gid, rowNumber, newData, setter, localData) => {
+        // UI Optimistic Update
+        const updated = localData.map(d => d._rowNumber === rowNumber ? { ...d, ...newData } : d);
+        setter(updated);
+
+        try {
+          await fetch(APPSCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'update', gid: gid, rowNumber: rowNumber, data: newData })
+          });
+        } catch (e) {
+          console.error("Ralat sync:", e);
+          alert("Gagal menyegerakkan data ke Google Sheet. Sila semak sambungan anda.");
+        }
+      };
+
+      const deleteSheetData = async (gid, rowNumber, setter, localData) => {
+        if(confirm("Padam rekod ini secara kekal dari Google Sheet?")) {
+          const updated = localData.filter(d => d._rowNumber !== rowNumber);
+          setter(updated);
+
+          try {
+            await fetch(APPSCRIPT_URL, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'delete', gid: gid, rowNumber: rowNumber })
+            });
+          } catch (e) {
+            console.error("Ralat padam:", e);
+            alert("Gagal memadam data dari Google Sheet.");
+          }
+        }
+      };
+
       if (loading) {
         return (
           <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <span className="ml-3 text-lg">Memuatkan Data Google Sheets...</span>
+            <span className="ml-3 text-lg">Memuatkan Data dari Google Sheets...</span>
           </div>
         );
       }
@@ -156,9 +176,9 @@
       const renderTabContent = () => {
         switch (activeTab) {
           case 'main': return <MainDashboard dv3={dv3Data} ppm={ppmData} kon={kontraktorData} colors={colors} />;
-          case 'dv3': return <DV3Dashboard data={dv3Data} setData={setDv3Data} colors={colors} />;
-          case 'ppm': return <PPMDashboard data={ppmData} setData={setPpmData} colors={colors} />;
-          case 'kontraktor': return <KontraktorDashboard data={kontraktorData} setData={setKontraktorData} colors={colors} />;
+          case 'dv3': return <DV3Dashboard data={dv3Data} updater={updateSheetData} deleter={deleteSheetData} setter={setDv3Data} colors={colors} />;
+          case 'ppm': return <PPMDashboard data={ppmData} updater={updateSheetData} deleter={deleteSheetData} setter={setPpmData} colors={colors} />;
+          case 'kontraktor': return <KontraktorDashboard data={kontraktorData} updater={updateSheetData} deleter={deleteSheetData} setter={setKontraktorData} colors={colors} />;
           case 'tetapan': return <Tetapan settings={settings} setSettings={setSettings} />;
           default: return null;
         }
@@ -305,7 +325,7 @@
       };
 
       const saveEdit = () => {
-        onSave(editingId, editForm);
+        onSave(editForm._rowNumber, editForm); // Menggunakan _rowNumber ke backend
         setEditingId(null);
       };
 
@@ -352,7 +372,7 @@
                         ) : (
                           <>
                             <button onClick={() => startEdit(row)} className="text-blue-600 hover:text-blue-800 p-1 bg-blue-100 rounded-full dark:bg-blue-900/30 dark:text-blue-400" title="Sunting"><Icon name="Edit2" size={16}/></button>
-                            <button onClick={() => onDelete(row.id)} className="text-red-600 hover:text-red-800 p-1 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400" title="Padam"><Icon name="Trash2" size={16}/></button>
+                            <button onClick={() => onDelete(row._rowNumber)} className="text-red-600 hover:text-red-800 p-1 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400" title="Padam"><Icon name="Trash2" size={16}/></button>
                           </>
                         )}
                       </td>
@@ -549,7 +569,8 @@
     // ==========================================
     // 2. DV3 DASHBOARD TAB
     // ==========================================
-    const DV3Dashboard = ({ data, setData, colors }) => {
+    const DV3Dashboard = ({ data, updater, deleter, setter, colors }) => {
+      const GID = 2136024607;
       const [filterTahun, setFilterTahun] = useState('Semua');
       const [filterBulanMula, setFilterBulanMula] = useState('Semua');
       const [filterBulanAkhir, setFilterBulanAkhir] = useState('Semua');
@@ -626,18 +647,17 @@
         }
       ];
 
-      const handleSaveEdit = (id, newRowData) => {
+      const handleSaveEdit = (rowNumber, newRowData) => {
         const ts = Number(newRowData['Tak Siap']) || 0;
         const s = Number(newRowData['Siap']) || 0;
         const b = Number(newRowData['Batal']) || 0;
         newRowData['Jumlah Doket'] = ts + s + b;
 
-        const updated = data.map(d => d.id === id ? { ...d, ...newRowData } : d);
-        setData(updated);
+        updater(GID, rowNumber, newRowData, setter, data);
       };
 
-      const handleDelete = (id) => {
-        if(confirm("Adakah anda pasti untuk memadam rekod ini?")) setData(data.filter(d => d.id !== id));
+      const handleDelete = (rowNumber) => {
+        deleter(GID, rowNumber, setter, data);
       };
 
       return (
@@ -685,15 +705,17 @@
             </ChartCard>
           </div>
 
-          <EditableTable title="Jadual Rekod DV3" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+          <EditableTable title="Jadual Rekod DV3 (Pautan ke Google Sheet)" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
         </div>
       );
     };
 
+
     // ==========================================
     // 3. PPM DASHBOARD TAB
     // ==========================================
-    const PPMDashboard = ({ data, setData, colors }) => {
+    const PPMDashboard = ({ data, updater, deleter, setter, colors }) => {
+      const GID = 1093378707;
       const [filterTahun, setFilterTahun] = useState('Semua');
       const [filterBulanMula, setFilterBulanMula] = useState('Semua');
       const [filterBulanAkhir, setFilterBulanAkhir] = useState('Semua');
@@ -764,16 +786,15 @@
         }
       ];
 
-      const handleSaveEdit = (id, newRowData) => {
+      const handleSaveEdit = (rowNumber, newRowData) => {
         const ts = Number(newRowData['Tak Siap']) || 0;
         const s = Number(newRowData['Siap']) || 0;
         newRowData['Jumlah PPM'] = ts + s;
-        const updated = data.map(d => d.id === id ? { ...d, ...newRowData } : d);
-        setData(updated);
+        updater(GID, rowNumber, newRowData, setter, data);
       };
 
-      const handleDelete = (id) => {
-        if(confirm("Padam rekod ini?")) setData(data.filter(d => d.id !== id));
+      const handleDelete = (rowNumber) => {
+        deleter(GID, rowNumber, setter, data);
       };
 
       return (
@@ -820,7 +841,7 @@
             </ChartCard>
           </div>
 
-          <EditableTable title="Rekod PPM" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+          <EditableTable title="Rekod PPM (Pautan ke Google Sheet)" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
         </div>
       );
     };
@@ -828,7 +849,8 @@
     // ==========================================
     // 4. KONTRAKTOR DASHBOARD TAB
     // ==========================================
-    const KontraktorDashboard = ({ data, setData, colors }) => {
+    const KontraktorDashboard = ({ data, updater, deleter, setter, colors }) => {
+      const GID = 0;
       const [filterTahun, setFilterTahun] = useState('Semua');
       const [filterBulanMula, setFilterBulanMula] = useState('Semua');
       const [filterBulanAkhir, setFilterBulanAkhir] = useState('Semua');
@@ -891,13 +913,12 @@
         { key: 'Jumlah RM', label: 'Jumlah RM (RM)', type: 'number' }
       ];
 
-      const handleSaveEdit = (id, newRowData) => {
-        const updated = data.map(d => d.id === id ? { ...d, ...newRowData } : d);
-        setData(updated);
+      const handleSaveEdit = (rowNumber, newRowData) => {
+        updater(GID, rowNumber, newRowData, setter, data);
       };
 
-      const handleDelete = (id) => {
-        if(confirm("Padam rekod ini?")) setData(data.filter(d => d.id !== id));
+      const handleDelete = (rowNumber) => {
+        deleter(GID, rowNumber, setter, data);
       };
 
       return (
@@ -942,7 +963,7 @@
             </ChartCard>
           </div>
 
-          <EditableTable title="Rekod Kontraktor" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+          <EditableTable title="Rekod Kontraktor (Pautan ke Google Sheet)" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
         </div>
       );
     };
@@ -1019,8 +1040,8 @@
                 Simpan Tetapan
               </button>
               
-              <div className="mt-4 p-4 bg-blue-50 dark:bg-gray-700/50 rounded-md text-sm text-gray-600 dark:text-gray-300">
-                <strong>Nota:</strong> Perubahan jadual (Edit/Padam) disimpan sementara dalam pelayar ini sahaja dan tidak akan mengubah data asal di Google Sheets. Segar semula laman akan memuatkan semula data dari Google Sheets.
+              <div className="mt-4 p-4 bg-green-50 dark:bg-gray-700/50 rounded-md text-sm text-green-800 dark:text-green-300">
+                <strong>Nota:</strong> Fail index.html anda telah berjaya dihubungkan ke Google Apps Script. Sebarang tindakan simpan/padam akan terus mengubah data di Google Sheets.
               </div>
             </div>
           </div>
