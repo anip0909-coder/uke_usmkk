@@ -1,31 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="ms">
 <head>
   <meta charset="utf-8">
   <title>Dashboard Kejuruteraan Elektrik</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- CDN Dependencies -->
+  <!-- Polyfill untuk Recharts dalam persekitaran pelayar standalone -->
+  <script>window.process = { env: { NODE_ENV: 'production' } };</script>
+  
+  <!-- React & ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Dependencies (Kebergantungan) untuk Recharts -->
   <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
-  <!-- Menggunakan versi Recharts 2.1.12 yang lebih stabil untuk UMD -->
+  
+  <!-- Recharts v2.1.12 (Versi stabil untuk pelayar UMD tanpa ralat BarChart) -->
   <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = { darkMode: 'class' }
   </script>
+
+  <!-- Babel Compiler -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
   <div id="root"></div>
 
-  <!-- React Application Logic -->
+  <!-- Logik Aplikasi React -->
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
     const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
 
-    // --- SVGs Icons Helper ---
+    // --- Pengganti ikon lucide-react ---
     const Icon = ({ name, size = 20, className = "" }) => {
       const svgProps = { width: size, height: size, fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className };
       const icons = {
@@ -40,9 +50,28 @@
         Trash2: <svg {...svgProps}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
         Check: <svg {...svgProps}><polyline points="20 6 9 17 4 12"/></svg>,
         X: <svg {...svgProps}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-        Menu: <svg {...svgProps}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        Menu: <svg {...svgProps}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+        AlertCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       };
       return icons[name] || null;
+    };
+
+    // --- Helper: Parsing CSV ---
+    const parseCSV = (csvText) => {
+      const lines = csvText.split('\n').filter(line => line.trim() !== '');
+      if (lines.length < 2) return [];
+      
+      const headers = lines[0].split(',').map(h => h.trim().replace(/['"]+/g, ''));
+      return lines.slice(1).map((line, index) => {
+        const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/['"]+/g, ''));
+        let obj = { id: `row-${Date.now()}-${index}` }; // Unique ID for editing
+        headers.forEach((h, i) => {
+          let val = values[i];
+          if (!isNaN(val) && val !== '') val = Number(val);
+          obj[h] = val;
+        });
+        return obj;
+      });
     };
 
     const SenaraiBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
@@ -65,30 +94,35 @@
         tabKontraktor: "Kontraktor"
       });
 
-      // --- Muat Turun Data dari Pelayan Google Apps Script ---
-      const fetchDashboardData = () => {
-        setLoading(true);
-        if (typeof google !== 'undefined' && google.script) {
-          google.script.run
-            .withSuccessHandler((result) => {
-              setDv3Data(result.dv3 || []);
-              setPpmData(result.ppm || []);
-              setKontraktorData(result.kontraktor || []);
-              setLoading(false);
-            })
-            .withFailureHandler((err) => {
-              setError(err.message);
-              setLoading(false);
-            })
-            .getDashboardData();
-        } else {
-          setError("Aplikasi ini mestilah dijalankan di dalam persekitaran Google Apps Script.");
-          setLoading(false);
-        }
-      };
-
+      // --- Fetch Data ---
       useEffect(() => {
-        fetchDashboardData();
+        const fetchData = async () => {
+          setLoading(true);
+          try {
+            const baseUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSVUEkRsAwWAUURHfvVWpxsv_366BZq8Ed1fyCYvwXwyJoTYHFg3oJrn6d-pEYfXhUXfKhXOYiNlaaV/pub?output=csv';
+            
+            const [resDv3, resPpm, resKon] = await Promise.all([
+              fetch(`${baseUrl}&gid=2136024607`),
+              fetch(`${baseUrl}&gid=1093378707`),
+              fetch(`${baseUrl}&gid=0`)
+            ]);
+
+            const textDv3 = await resDv3.text();
+            const textPpm = await resPpm.text();
+            const textKon = await resKon.text();
+
+            setDv3Data(parseCSV(textDv3));
+            setPpmData(parseCSV(textPpm));
+            setKontraktorData(parseCSV(textKon));
+            setError(null);
+          } catch (err) {
+            console.error("Ralat mengambil data dari Google Sheets:", err);
+            setError("Gagal memuat turun data. Sila pastikan pautan Google Sheet boleh diakses secara awam.");
+          } finally {
+            setLoading(false);
+          }
+        };
+        fetchData();
       }, []);
 
       useEffect(() => {
@@ -96,7 +130,11 @@
         else document.documentElement.classList.remove('dark');
       }, [darkMode]);
 
-      const colors = { primary: '#3b82f6', success: '#22c55e', danger: '#ef4444', warning: '#eab308', purple: '#a855f7', text: darkMode ? '#e2e8f0' : '#334155', grid: darkMode ? '#334155' : '#e2e8f0' };
+      const colors = {
+        primary: '#3b82f6', success: '#22c55e', danger: '#ef4444', 
+        warning: '#eab308', purple: '#a855f7', 
+        text: darkMode ? '#e2e8f0' : '#334155', grid: darkMode ? '#334155' : '#e2e8f0'
+      };
 
       const navItems = [
         { id: 'main', label: 'Main Dashboard', icon: 'LayoutDashboard' },
@@ -108,76 +146,77 @@
 
       if (loading) {
         return (
-          <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <span className="ml-3 text-lg">Menyelaraskan data dari Google Sheets...</span>
+            <span className="ml-3 text-lg">Memuatkan Data Google Sheets...</span>
           </div>
         );
       }
 
-      // Action Handlers yang menyegerakkan Data Ke Google Sheet
-      const updateSheetData = (gid, rowIndex, newRowData, setter, localData) => {
-        // Optimistic UI Update - Kemaskini UI Serta-Merta
-        const updated = localData.map(d => d._rowIndex === rowIndex ? { ...d, ...newRowData } : d);
-        setter(updated);
-
-        // Hantar request ke pelayan/Google Apps Script
-        if (typeof google !== 'undefined') {
-          google.script.run.updateRecord(gid, rowIndex, newRowData);
-        }
-      };
-
-      const deleteSheetData = (gid, rowIndex) => {
-        if(confirm("Padam rekod ini secara kekal dari Google Sheet?")) {
-          setLoading(true);
-          if (typeof google !== 'undefined') {
-            google.script.run
-              .withSuccessHandler(() => { fetchDashboardData(); }) // Refetch data untuk pastikan row index tepat selepas padam
-              .deleteRecord(gid, rowIndex);
-          }
-        }
-      };
-
       const renderTabContent = () => {
-        if(error) return <div className="text-red-500 p-4 font-bold">{error}</div>;
-
         switch (activeTab) {
           case 'main': return <MainDashboard dv3={dv3Data} ppm={ppmData} kon={kontraktorData} colors={colors} />;
-          case 'dv3': return <DV3Dashboard data={dv3Data} updater={updateSheetData} deleter={deleteSheetData} setter={setDv3Data} colors={colors} />;
-          case 'ppm': return <PPMDashboard data={ppmData} updater={updateSheetData} deleter={deleteSheetData} setter={setPpmData} colors={colors} />;
-          case 'kontraktor': return <KontraktorDashboard data={kontraktorData} updater={updateSheetData} deleter={deleteSheetData} setter={setKontraktorData} colors={colors} />;
+          case 'dv3': return <DV3Dashboard data={dv3Data} setData={setDv3Data} colors={colors} />;
+          case 'ppm': return <PPMDashboard data={ppmData} setData={setPpmData} colors={colors} />;
+          case 'kontraktor': return <KontraktorDashboard data={kontraktorData} setData={setKontraktorData} colors={colors} />;
           case 'tetapan': return <Tetapan settings={settings} setSettings={setSettings} />;
           default: return null;
         }
       };
 
       return (
-        <div className={`min-h-screen font-sans`}>
+        <div className={`min-h-screen font-sans ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-800'}`}>
           <div className={`fixed top-0 left-0 right-0 h-16 z-50 flex items-center justify-between px-4 shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
             <div className="flex items-center space-x-4">
-              <button className="md:hidden p-2" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}><Icon name="Menu" /></button>
-              <h1 className="text-xl font-bold truncate text-blue-600 dark:text-blue-400">{settings.systemName}</h1>
+              <button className="md:hidden p-2" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                <Icon name="Menu" size={24} />
+              </button>
+              <h1 className="text-xl font-bold truncate text-blue-600 dark:text-blue-400">
+                {settings.systemName}
+              </h1>
             </div>
+            
             <div className="flex items-center space-x-2 md:space-x-4">
               <div className="hidden md:flex space-x-1">
                 {navItems.map(item => (
-                  <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === item.id ? (darkMode ? 'bg-gray-700 text-blue-400' : 'bg-blue-100 text-blue-700') : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                    <span className="mr-2"><Icon name={item.icon} size={18} /></span>{item.label}
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeTab === item.id 
+                        ? (darkMode ? 'bg-gray-700 text-blue-400' : 'bg-blue-100 text-blue-700')
+                        : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <Icon name={item.icon} size={18} className="mr-2" />
+                    {item.label}
                   </button>
                 ))}
               </div>
-              <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                <Icon name={darkMode ? 'Sun' : 'Moon'} />
+              <button 
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Icon name={darkMode ? 'Sun' : 'Moon'} size={20} />
               </button>
             </div>
           </div>
-          
+
           {isMobileMenuOpen && (
             <div className={`md:hidden fixed top-16 left-0 right-0 z-40 shadow-lg border-t ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
               <div className="flex flex-col p-2">
                 {navItems.map(item => (
-                  <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`flex items-center px-4 py-3 rounded-md text-base font-medium mb-1 ${activeTab === item.id ? (darkMode ? 'bg-gray-700 text-blue-400' : 'bg-blue-100 text-blue-700') : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                    <span className="mr-3"><Icon name={item.icon} size={20} /></span>{item.label}
+                  <button
+                    key={item.id}
+                    onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
+                    className={`flex items-center px-4 py-3 rounded-md text-base font-medium mb-1 ${
+                      activeTab === item.id 
+                        ? (darkMode ? 'bg-gray-700 text-blue-400' : 'bg-blue-100 text-blue-700')
+                        : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <Icon name={item.icon} size={20} className="mr-3" />
+                    {item.label}
                   </button>
                 ))}
               </div>
@@ -185,14 +224,21 @@
           )}
 
           <div className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-            {renderTabContent()}
+            {error ? (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center">
+                <Icon name="AlertCircle" className="mr-2" />
+                <p>{error}</p>
+              </div>
+            ) : (
+              renderTabContent()
+            )}
           </div>
         </div>
       );
     }
 
     // ==========================================
-    // UI COMPONENTS
+    // REUSABLE UI COMPONENTS
     // ==========================================
     const MetricCard = ({ title, value, color, subtext }) => (
       <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-center items-center text-center">
@@ -214,7 +260,11 @@
     const FilterSelect = ({ label, value, options, onChange }) => (
       <div className="flex flex-col min-w-[150px]">
         <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-        <select value={value} onChange={(e) => onChange(e.target.value)} className="border rounded px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500">
+        <select 
+          value={value} 
+          onChange={(e) => onChange(e.target.value)}
+          className="border rounded px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500"
+        >
           {options.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
         </select>
       </div>
@@ -224,6 +274,7 @@
       const peratusNum = Number(peratus) || 0;
       const formatted = peratusNum.toFixed(1);
       let colorClass = 'bg-blue-500';
+      
       if (peratusNum >= 80) colorClass = 'bg-green-500';
       else if (peratusNum < 50) colorClass = 'bg-red-500';
       else if (peratusNum < 80) colorClass = 'bg-yellow-500';
@@ -242,13 +293,22 @@
       const [editingId, setEditingId] = useState(null);
       const [editForm, setEditForm] = useState({});
 
-      const startEdit = (row) => { setEditingId(row._rowIndex); setEditForm({ ...row }); };
+      const startEdit = (row) => {
+        setEditingId(row.id);
+        setEditForm({ ...row });
+      };
+
       const handleInputChange = (e, key, type) => {
         let val = e.target.value;
         if (type === 'number') val = val ? Number(val) : 0;
         setEditForm({ ...editForm, [key]: val });
       };
-      const saveEdit = () => { onSave(editingId, editForm); setEditingId(null); };
+
+      const saveEdit = () => {
+        onSave(editingId, editForm);
+        setEditingId(null);
+      };
+
       const cancelEdit = () => { setEditingId(null); };
 
       return (
@@ -266,14 +326,21 @@
               </thead>
               <tbody>
                 {data.slice(0, 50).map((row) => {
-                  const isEditing = editingId === row._rowIndex;
+                  const isEditing = editingId === row.id;
                   return (
-                    <tr key={row._rowIndex} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <tr key={row.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       {columns.map(c => (
                         <td key={c.key} className="px-4 py-2">
                           {isEditing && !c.readOnly ? (
-                            <input type={c.type || "text"} value={editForm[c.key]} onChange={(e) => handleInputChange(e, c.key, c.type)} className="w-full px-2 py-1 border rounded dark:bg-gray-900 dark:border-gray-600 outline-none focus:ring-1 focus:ring-blue-500" />
-                          ) : ( c.render ? c.render(row) : row[c.key] )}
+                            <input 
+                              type={c.type || "text"}
+                              value={editForm[c.key]}
+                              onChange={(e) => handleInputChange(e, c.key, c.type)}
+                              className="w-full px-2 py-1 border rounded dark:bg-gray-900 dark:border-gray-600 outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          ) : (
+                            c.render ? c.render(row) : row[c.key]
+                          )}
                         </td>
                       ))}
                       <td className="px-4 py-2 flex justify-center space-x-2">
@@ -285,13 +352,19 @@
                         ) : (
                           <>
                             <button onClick={() => startEdit(row)} className="text-blue-600 hover:text-blue-800 p-1 bg-blue-100 rounded-full dark:bg-blue-900/30 dark:text-blue-400" title="Sunting"><Icon name="Edit2" size={16}/></button>
-                            <button onClick={() => onDelete(row._rowIndex)} className="text-red-600 hover:text-red-800 p-1 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400" title="Padam"><Icon name="Trash2" size={16}/></button>
+                            <button onClick={() => onDelete(row.id)} className="text-red-600 hover:text-red-800 p-1 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400" title="Padam"><Icon name="Trash2" size={16}/></button>
                           </>
                         )}
                       </td>
                     </tr>
                   )
                 })}
+                {data.length === 0 && (
+                  <tr><td colSpan={columns.length + 1} className="text-center py-8 text-gray-500">Tiada rekod ditemui berdasarkan penapis semasa.</td></tr>
+                )}
+                {data.length > 50 && (
+                   <tr><td colSpan={columns.length + 1} className="text-center py-3 text-xs text-gray-500 bg-gray-50 dark:bg-gray-800/50">Hanya 50 rekod pertama dipaparkan. Gunakan penapis untuk mencari data khusus.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -300,7 +373,7 @@
     };
 
     // ==========================================
-    // MAIN DASHBOARD TAB
+    // 1. MAIN DASHBOARD TAB
     // ==========================================
     const MainDashboard = ({ dv3, ppm, kon, colors }) => {
       const [filterBulan, setFilterBulan] = useState('Semua');
@@ -313,9 +386,20 @@
 
       const bulanOptions = ['Semua', ...SenaraiBulan];
 
-      const fDv3 = useMemo(() => dv3.filter(d => (filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun)) && (filterBulan === 'Semua' || String(d.Bulan) === String(filterBulan))), [dv3, filterTahun, filterBulan]);
-      const fPpm = useMemo(() => ppm.filter(d => (filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun)) && (filterBulan === 'Semua' || String(d.Bulan) === String(filterBulan))), [ppm, filterTahun, filterBulan]);
-      const fKon = useMemo(() => kon.filter(d => (filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun)) && (filterBulan === 'Semua' || String(d.Bulan) === String(filterBulan))), [kon, filterTahun, filterBulan]);
+      const fDv3 = useMemo(() => dv3.filter(d => 
+        (filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun)) &&
+        (filterBulan === 'Semua' || String(d.Bulan) === String(filterBulan))
+      ), [dv3, filterTahun, filterBulan]);
+
+      const fPpm = useMemo(() => ppm.filter(d => 
+        (filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun)) &&
+        (filterBulan === 'Semua' || String(d.Bulan) === String(filterBulan))
+      ), [ppm, filterTahun, filterBulan]);
+
+      const fKon = useMemo(() => kon.filter(d => 
+        (filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun)) &&
+        (filterBulan === 'Semua' || String(d.Bulan) === String(filterBulan))
+      ), [kon, filterTahun, filterBulan]);
 
       const mJumlahDoket = fDv3.reduce((acc, curr) => acc + (Number(curr['Jumlah Doket']) || 0), 0);
       const mSiap = fDv3.reduce((acc, curr) => acc + (Number(curr['Siap']) || 0), 0);
@@ -328,18 +412,57 @@
       const pTakSiap = mJumlahDoket > 0 ? ((mTakSiap / mJumlahDoket) * 100).toFixed(1) : 0;
       const pBatal = mJumlahDoket > 0 ? ((mBatal / mJumlahDoket) * 100).toFixed(1) : 0;
 
-      const chart1Data = useMemo(() => Object.entries(dv3.reduce((acc, curr) => { acc[curr.Tahun||'Lain'] = (acc[curr.Tahun||'Lain'] || 0) + (Number(curr['Jumlah Doket']) || 0); return acc; }, {})).map(([k,v]) => ({name:k, value:v})).sort((a,b)=>a.name - b.name), [dv3]);
-      const chart2Data = useMemo(() => Object.entries(fPpm.reduce((acc, curr) => { acc[curr.Bulan||'Lain'] = (acc[curr.Bulan||'Lain'] || 0) + (Number(curr['Jumlah PPM']) || 0); return acc; }, {})).map(([k,v]) => ({name:k, value:v})), [fPpm]);
-      const chart3Data = useMemo(() => Object.entries(kon.reduce((acc, curr) => { acc[curr.Tahun||'Lain'] = (acc[curr.Tahun||'Lain'] || 0) + (Number(curr['Jumlah RM']) || 0); return acc; }, {})).map(([k,v]) => ({name:k, value:v})).sort((a,b)=>a.name - b.name), [kon]);
-      
+      const chart1Data = useMemo(() => {
+        const grouped = dv3.reduce((acc, curr) => {
+          const year = curr.Tahun || 'Tiada Tahun';
+          acc[year] = (acc[year] || 0) + (Number(curr['Jumlah Doket']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, value: grouped[k] })).sort((a,b)=>a.name - b.name);
+      }, [dv3]);
+
+      const chart2Data = useMemo(() => {
+        const grouped = fPpm.reduce((acc, curr) => {
+          const month = curr.Bulan || 'Lain';
+          acc[month] = (acc[month] || 0) + (Number(curr['Jumlah PPM']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, value: grouped[k] }));
+      }, [fPpm]);
+
+      const chart3Data = useMemo(() => {
+        const grouped = kon.reduce((acc, curr) => {
+          const year = curr.Tahun || 'Tiada Tahun';
+          acc[year] = (acc[year] || 0) + (Number(curr['Jumlah RM']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, value: grouped[k] })).sort((a,b)=>a.name - b.name);
+      }, [kon]);
+
       const chart4Data = useMemo(() => {
-        let g = fDv3.reduce((acc, curr) => { let p = curr.Penyenggara || 'Lain'; if(!acc[p]) acc[p]={s:0,j:0}; acc[p].s+=(Number(curr['Siap'])||0); acc[p].j+=(Number(curr['Jumlah Doket'])||0); return acc; }, {});
-        return Object.entries(g).map(([k,v]) => ({name: k, peratus: v.j>0?((v.s/v.j)*100).toFixed(1):0})).sort((a,b) => b.peratus - a.peratus).slice(0, 10);
+        const grouped = fDv3.reduce((acc, curr) => {
+          const p = curr.Penyenggara || 'Tiada Nama';
+          if(!acc[p]) acc[p] = { siap: 0, jumlah: 0 };
+          acc[p].siap += (Number(curr['Siap']) || 0);
+          acc[p].jumlah += (Number(curr['Jumlah Doket']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({
+          name: k,
+          peratus: grouped[k].jumlah > 0 ? ((grouped[k].siap / grouped[k].jumlah) * 100).toFixed(1) : 0
+        })).sort((a,b) => b.peratus - a.peratus).slice(0, 10);
       }, [fDv3]);
 
       const chart5Data = useMemo(() => {
-        let g = fKon.reduce((acc, curr) => { let k = curr.Kontraktor || 'Lain'; acc[k]=(acc[k]||0)+(Number(curr['Jumlah RM'])||0); return acc; }, {});
-        return Object.entries(g).map(([k,v]) => ({name: k, RM: v})).sort((a,b) => b.RM - a.RM).slice(0, 10);
+        const grouped = fKon.reduce((acc, curr) => {
+          const k = curr.Kontraktor || 'Tiada Nama';
+          acc[k] = (acc[k] || 0) + (Number(curr['Jumlah RM']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({
+          name: k,
+          RM: grouped[k]
+        })).sort((a,b) => b.RM - a.RM).slice(0, 10);
       }, [fKon]);
 
       return (
@@ -348,195 +471,564 @@
             <FilterSelect label="Tahun" value={filterTahun} options={tahunOptions} onChange={setFilterTahun} />
             <FilterSelect label="Bulan" value={filterBulan} options={bulanOptions} onChange={setFilterBulan} />
           </div>
+
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <MetricCard title="Jumlah Doket (DV3)" value={mJumlahDoket} color="text-blue-500" />
             <MetricCard title="Doket Siap" value={mSiap} subtext={`${pSiap}%`} color="text-green-500" />
             <MetricCard title="Doket Tak Siap" value={mTakSiap} subtext={`${pTakSiap}%`} color="text-red-500" />
             <MetricCard title="Doket Batal" value={mBatal} subtext={`${pBatal}%`} color="text-gray-500" />
             <MetricCard title="Jumlah PPM" value={mJumlahPPM} color="text-purple-500" />
-            <MetricCard title="Jumlah RM" value={`RM ${(mJumlahRM).toLocaleString()}`} color="text-yellow-500" />
+            <MetricCard title="Jumlah RM (Kontraktor)" value={`RM ${(mJumlahRM).toLocaleString()}`} color="text-yellow-500" />
           </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartCard title="Prestasi DV3 (Tahunan)"><ResponsiveContainer width="100%" height={300}><BarChart data={chart1Data}><CartesianGrid strokeDasharray="3 3" stroke={colors.grid} /><XAxis dataKey="name" stroke={colors.text} /><YAxis stroke={colors.text} /><Tooltip /><Bar dataKey="value" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></ChartCard>
-            <ChartCard title="Prestasi PPM (Bulanan)"><ResponsiveContainer width="100%" height={300}><BarChart data={chart2Data}><CartesianGrid strokeDasharray="3 3" stroke={colors.grid} /><XAxis dataKey="name" stroke={colors.text} /><YAxis stroke={colors.text} /><Tooltip /><Bar dataKey="value" fill={colors.purple} name="Jumlah PPM" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></ChartCard>
-            <ChartCard title="Nilai RM (Tahunan)"><ResponsiveContainer width="100%" height={300}><LineChart data={chart3Data}><CartesianGrid strokeDasharray="3 3" stroke={colors.grid} /><XAxis dataKey="name" stroke={colors.text} /><YAxis stroke={colors.text} /><Tooltip /><Line type="monotone" dataKey="value" stroke={colors.warning} strokeWidth={3} name="Nilai RM" /></LineChart></ResponsiveContainer></ChartCard>
-            <ChartCard title="Ranking Penyenggara (% Siap)"><ResponsiveContainer width="100%" height={300}><BarChart data={chart4Data} layout="vertical" margin={{ left: 50 }}><CartesianGrid strokeDasharray="3 3" stroke={colors.grid} /><XAxis type="number" domain={[0, 100]} stroke={colors.text} /><YAxis type="category" dataKey="name" stroke={colors.text} width={100} /><Tooltip /><Bar dataKey="peratus" fill={colors.success} name="% Siap" radius={[0, 4, 4, 0]} /></BarChart></ResponsiveContainer></ChartCard>
-            <ChartCard title="Ranking Kontraktor (Nilai RM)" className="lg:col-span-2"><ResponsiveContainer width="100%" height={300}><BarChart data={chart5Data}><CartesianGrid strokeDasharray="3 3" stroke={colors.grid} /><XAxis dataKey="name" stroke={colors.text} /><YAxis stroke={colors.text} /><Tooltip /><Bar dataKey="RM" fill={colors.warning} name="Jumlah RM" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></ChartCard>
+            <ChartCard title="Prestasi DV3 (Jumlah Doket Tahunan)">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chart1Data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--tw-bg-opacity)', color: 'black' }} />
+                  <Bar dataKey="value" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard title={`Prestasi PPM (${filterTahun}) - Bulanan`}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chart2Data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip />
+                  <Bar dataKey="value" fill={colors.purple} name="Jumlah PPM" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard title="Nilai RM Kontraktor (Tahunan)">
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chart3Data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="value" stroke={colors.warning} strokeWidth={3} name="Nilai RM" />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard title={`Ranking Penyenggara (% Siap DV3)`}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chart4Data} layout="vertical" margin={{ left: 50 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis type="number" domain={[0, 100]} stroke={colors.text} />
+                  <YAxis type="category" dataKey="name" stroke={colors.text} width={100} />
+                  <Tooltip />
+                  <Bar dataKey="peratus" fill={colors.success} name="% Siap" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard title={`Ranking Kontraktor (Nilai RM)`} className="lg:col-span-2">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chart5Data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip />
+                  <Bar dataKey="RM" fill={colors.warning} name="Jumlah RM" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
           </div>
         </div>
       );
     };
 
     // ==========================================
-    // DV3 DASHBOARD TAB
+    // 2. DV3 DASHBOARD TAB
     // ==========================================
-    const DV3Dashboard = ({ data, updater, deleter, setter, colors }) => {
-      const GID = 2136024607;
-      const [fTahun, setFTahun] = useState('Semua');
-      const [fMula, setFMula] = useState('Semua');
-      const [fAkhir, setFAkhir] = useState('Semua');
-      const [fPeny, setFPeny] = useState('Semua');
+    const DV3Dashboard = ({ data, setData, colors }) => {
+      const [filterTahun, setFilterTahun] = useState('Semua');
+      const [filterBulanMula, setFilterBulanMula] = useState('Semua');
+      const [filterBulanAkhir, setFilterBulanAkhir] = useState('Semua');
+      const [filterPenyenggara, setFilterPenyenggara] = useState('Semua');
 
-      const filtered = useMemo(() => data.filter(d => {
-        let pB = true; 
-        if(fMula!=='Semua' && fAkhir!=='Semua') { const iD=SenaraiBulan.indexOf(d.Bulan); pB = (iD>=SenaraiBulan.indexOf(fMula) && iD<=SenaraiBulan.indexOf(fAkhir)); }
-        return (fTahun==='Semua'||String(d.Tahun)===String(fTahun)) && (fPeny==='Semua'||d.Penyenggara===fPeny) && pB;
-      }), [data, fTahun, fMula, fAkhir, fPeny]);
+      const tahunOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)];
+      const bulanOptions = ['Semua', ...SenaraiBulan];
+      const penyenggaraOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Penyenggara))).filter(Boolean).sort()];
 
-      const met = {
-        j: filtered.reduce((acc, c) => acc + (Number(c['Jumlah Doket'])||0), 0),
-        s: filtered.reduce((acc, c) => acc + (Number(c['Siap'])||0), 0),
-        ts: filtered.reduce((acc, c) => acc + (Number(c['Tak Siap'])||0), 0),
-        b: filtered.reduce((acc, c) => acc + (Number(c['Batal'])||0), 0)
+      const getBulanIndex = (b) => SenaraiBulan.indexOf(b);
+
+      const filteredData = useMemo(() => {
+        return data.filter(d => {
+          let passTahun = filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun);
+          let passPenyenggara = filterPenyenggara === 'Semua' || d.Penyenggara === filterPenyenggara;
+          
+          let passBulan = true;
+          if (filterBulanMula !== 'Semua' && filterBulanAkhir !== 'Semua') {
+            const idxD = getBulanIndex(d.Bulan);
+            const idxM = getBulanIndex(filterBulanMula);
+            const idxA = getBulanIndex(filterBulanAkhir);
+            if (idxD !== -1) {
+              passBulan = (idxD >= idxM && idxD <= idxA);
+            }
+          }
+          return passTahun && passPenyenggara && passBulan;
+        });
+      }, [data, filterTahun, filterBulanMula, filterBulanAkhir, filterPenyenggara]);
+
+      const metrics = {
+        jumlah: filteredData.reduce((acc, curr) => acc + (Number(curr['Jumlah Doket']) || 0), 0),
+        siap: filteredData.reduce((acc, curr) => acc + (Number(curr['Siap']) || 0), 0),
+        takSiap: filteredData.reduce((acc, curr) => acc + (Number(curr['Tak Siap']) || 0), 0),
+        batal: filteredData.reduce((acc, curr) => acc + (Number(curr['Batal']) || 0), 0),
       };
+      metrics.peratus = metrics.jumlah > 0 ? ((metrics.siap / metrics.jumlah) * 100).toFixed(1) : 0;
+      const pTakSiap = metrics.jumlah > 0 ? ((metrics.takSiap / metrics.jumlah) * 100).toFixed(1) : 0;
+      const pBatal = metrics.jumlah > 0 ? ((metrics.batal / metrics.jumlah) * 100).toFixed(1) : 0;
+
+      const chart1Data = useMemo(() => {
+        const grouped = filteredData.reduce((acc, curr) => {
+          const p = curr.Penyenggara || 'Tiada';
+          if(!acc[p]) acc[p] = { name: p, Siap: 0, 'Tak Siap': 0 };
+          acc[p].Siap += (Number(curr['Siap']) || 0);
+          acc[p]['Tak Siap'] += (Number(curr['Tak Siap']) || 0);
+          return acc;
+        }, {});
+        return Object.values(grouped);
+      }, [filteredData]);
+
+      const chart2Data = useMemo(() => {
+        const grouped = data.reduce((acc, curr) => {
+          const t = curr.Tahun || 'Tiada';
+          acc[t] = (acc[t] || 0) + (Number(curr['Jumlah Doket']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] })).sort((a,b)=>a.name - b.name);
+      }, [data]);
 
       const columns = [
-        { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true }, { key: 'Bulan', label: 'Bulan', type: 'text', readOnly: true }, { key: 'Penyenggara', label: 'Penyenggara', type: 'text', readOnly: true },
-        { key: 'Tak Siap', label: 'Tak Siap', type: 'number' }, { key: 'Siap', label: 'Siap', type: 'number' }, { key: 'Batal', label: 'Batal', type: 'number' }, { key: 'Jumlah Doket', label: 'Jumlah Doket', type: 'number', readOnly: true },
-        { key: 'Peratus', label: '% Siap', readOnly: true, render: (row) => <ProgressBar peratus={row['Jumlah Doket']>0?((row['Siap']/row['Jumlah Doket'])*100):0} /> }
+        { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
+        { key: 'Bulan', label: 'Bulan', type: 'text', readOnly: true },
+        { key: 'Penyenggara', label: 'Penyenggara', type: 'text', readOnly: true },
+        { key: 'Tak Siap', label: 'Tak Siap', type: 'number' },
+        { key: 'Siap', label: 'Siap', type: 'number' },
+        { key: 'Batal', label: 'Batal', type: 'number' },
+        { key: 'Jumlah Doket', label: 'Jumlah Doket', type: 'number', readOnly: true },
+        { 
+          key: 'Peratus', label: '% Siap', readOnly: true, 
+          render: (row) => {
+            const peratus = row['Jumlah Doket'] > 0 ? ((row['Siap'] / row['Jumlah Doket']) * 100) : 0;
+            return <ProgressBar peratus={peratus} />;
+          }
+        }
       ];
+
+      const handleSaveEdit = (id, newRowData) => {
+        const ts = Number(newRowData['Tak Siap']) || 0;
+        const s = Number(newRowData['Siap']) || 0;
+        const b = Number(newRowData['Batal']) || 0;
+        newRowData['Jumlah Doket'] = ts + s + b;
+
+        const updated = data.map(d => d.id === id ? { ...d, ...newRowData } : d);
+        setData(updated);
+      };
+
+      const handleDelete = (id) => {
+        if(confirm("Adakah anda pasti untuk memadam rekod ini?")) setData(data.filter(d => d.id !== id));
+      };
 
       return (
         <div className="space-y-6 animate-fade-in">
           <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <FilterSelect label="Tahun" value={fTahun} options={['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)]} onChange={setFTahun} />
-            <FilterSelect label="Bulan Mula" value={fMula} options={['Semua', ...SenaraiBulan]} onChange={setFMula} />
-            <FilterSelect label="Bulan Akhir" value={fAkhir} options={['Semua', ...SenaraiBulan]} onChange={setFAkhir} />
-            <FilterSelect label="Penyenggara" value={fPeny} options={['Semua', ...Array.from(new Set(data.map(d=>d.Penyenggara))).filter(Boolean).sort()]} onChange={setFPeny} />
+            <FilterSelect label="Tahun" value={filterTahun} options={tahunOptions} onChange={setFilterTahun} />
+            <FilterSelect label="Bulan Mula" value={filterBulanMula} options={bulanOptions} onChange={setFilterBulanMula} />
+            <FilterSelect label="Bulan Akhir" value={filterBulanAkhir} options={bulanOptions} onChange={setFilterBulanAkhir} />
+            <FilterSelect label="Penyenggara" value={filterPenyenggara} options={penyenggaraOptions} onChange={setFilterPenyenggara} />
           </div>
+
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <MetricCard title="Jumlah Doket" value={met.j} color="text-blue-500" />
-            <MetricCard title="Siap" value={met.s} subtext={`${met.j>0?((met.s/met.j)*100).toFixed(1):0}%`} color="text-green-500" />
-            <MetricCard title="Tak Siap" value={met.ts} subtext={`${met.j>0?((met.ts/met.j)*100).toFixed(1):0}%`} color="text-red-500" />
-            <MetricCard title="Batal" value={met.b} subtext={`${met.j>0?((met.b/met.j)*100).toFixed(1):0}%`} color="text-gray-500" />
-            <MetricCard title="% Siap" value={`${met.j>0?((met.s/met.j)*100).toFixed(1):0}%`} color="text-indigo-500" />
+            <MetricCard title="Jumlah Doket" value={metrics.jumlah} color="text-blue-500" />
+            <MetricCard title="Siap" value={metrics.siap} subtext={`${metrics.peratus}%`} color="text-green-500" />
+            <MetricCard title="Tak Siap" value={metrics.takSiap} subtext={`${pTakSiap}%`} color="text-red-500" />
+            <MetricCard title="Batal" value={metrics.batal} subtext={`${pBatal}%`} color="text-gray-500" />
+            <MetricCard title="% Siap Keseluruhan" value={`${metrics.peratus}%`} color="text-indigo-500" />
           </div>
-          <EditableTable title="Jadual Rekod DV3 (Live ke Google Sheet)" data={filtered} columns={columns} 
-            onSave={(idx, row) => {
-              row['Jumlah Doket'] = (Number(row['Tak Siap'])||0) + (Number(row['Siap'])||0) + (Number(row['Batal'])||0);
-              updater(GID, idx, row, setter, data);
-            }} 
-            onDelete={(idx) => deleter(GID, idx)} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartCard title="Prestasi Penyenggara (Siap / Tak Siap)">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chart1Data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="Siap" stackId="a" fill={colors.success} />
+                  <Bar dataKey="Tak Siap" stackId="a" fill={colors.danger} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard title="Trend Tahunan DV3">
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chart2Data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="Jumlah" stroke={colors.primary} strokeWidth={3} />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </div>
+
+          <EditableTable title="Jadual Rekod DV3" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
         </div>
       );
     };
 
     // ==========================================
-    // PPM DASHBOARD TAB
+    // 3. PPM DASHBOARD TAB
     // ==========================================
-    const PPMDashboard = ({ data, updater, deleter, setter, colors }) => {
-      const GID = 1093378707;
-      const [fTahun, setFTahun] = useState('Semua');
-      const [fMula, setFMula] = useState('Semua');
-      const [fAkhir, setFAkhir] = useState('Semua');
-      const [fPeny, setFPeny] = useState('Semua');
+    const PPMDashboard = ({ data, setData, colors }) => {
+      const [filterTahun, setFilterTahun] = useState('Semua');
+      const [filterBulanMula, setFilterBulanMula] = useState('Semua');
+      const [filterBulanAkhir, setFilterBulanAkhir] = useState('Semua');
+      const [filterPenyenggara, setFilterPenyenggara] = useState('Semua');
 
-      const filtered = useMemo(() => data.filter(d => {
-        let pB = true; 
-        if(fMula!=='Semua' && fAkhir!=='Semua') { const iD=SenaraiBulan.indexOf(d.Bulan); pB = (iD>=SenaraiBulan.indexOf(fMula) && iD<=SenaraiBulan.indexOf(fAkhir)); }
-        return (fTahun==='Semua'||String(d.Tahun)===String(fTahun)) && (fPeny==='Semua'||d.Penyenggara===fPeny) && pB;
-      }), [data, fTahun, fMula, fAkhir, fPeny]);
+      const tahunOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)];
+      const bulanOptions = ['Semua', ...SenaraiBulan];
+      const penyenggaraOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Penyenggara))).filter(Boolean).sort()];
 
-      const met = {
-        j: filtered.reduce((acc, c) => acc + (Number(c['Jumlah PPM'])||0), 0),
-        s: filtered.reduce((acc, c) => acc + (Number(c['Siap'])||0), 0),
-        ts: filtered.reduce((acc, c) => acc + (Number(c['Tak Siap'])||0), 0)
+      const getBulanIndex = (b) => SenaraiBulan.indexOf(b);
+
+      const filteredData = useMemo(() => {
+        return data.filter(d => {
+          let passTahun = filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun);
+          let passPenyenggara = filterPenyenggara === 'Semua' || d.Penyenggara === filterPenyenggara;
+          let passBulan = true;
+          if (filterBulanMula !== 'Semua' && filterBulanAkhir !== 'Semua') {
+            const idxD = getBulanIndex(d.Bulan);
+            const idxM = getBulanIndex(filterBulanMula);
+            const idxA = getBulanIndex(filterBulanAkhir);
+            if (idxD !== -1) passBulan = (idxD >= idxM && idxD <= idxA);
+          }
+          return passTahun && passPenyenggara && passBulan;
+        });
+      }, [data, filterTahun, filterBulanMula, filterBulanAkhir, filterPenyenggara]);
+
+      const metrics = {
+        jumlah: filteredData.reduce((acc, curr) => acc + (Number(curr['Jumlah PPM']) || 0), 0),
+        siap: filteredData.reduce((acc, curr) => acc + (Number(curr['Siap']) || 0), 0),
+        takSiap: filteredData.reduce((acc, curr) => acc + (Number(curr['Tak Siap']) || 0), 0),
+      };
+      metrics.peratus = metrics.jumlah > 0 ? ((metrics.siap / metrics.jumlah) * 100).toFixed(1) : 0;
+      const pTakSiap = metrics.jumlah > 0 ? ((metrics.takSiap / metrics.jumlah) * 100).toFixed(1) : 0;
+
+      const chart1Data = useMemo(() => {
+        const grouped = filteredData.reduce((acc, curr) => {
+          const p = curr.Penyenggara || 'Tiada';
+          if(!acc[p]) acc[p] = { name: p, Siap: 0, 'Tak Siap': 0 };
+          acc[p].Siap += (Number(curr['Siap']) || 0);
+          acc[p]['Tak Siap'] += (Number(curr['Tak Siap']) || 0);
+          return acc;
+        }, {});
+        return Object.values(grouped);
+      }, [filteredData]);
+
+      const chart2Data = useMemo(() => {
+        const grouped = filteredData.reduce((acc, curr) => {
+          const b = curr.Bulan || 'Tiada';
+          acc[b] = (acc[b] || 0) + (Number(curr['Jumlah PPM']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] })).sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
+      }, [filteredData]);
+
+      const columns = [
+        { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
+        { key: 'Bulan', label: 'Bulan', type: 'text', readOnly: true },
+        { key: 'Penyenggara', label: 'Penyenggara', type: 'text', readOnly: true },
+        { key: 'Tak Siap', label: 'Tak Siap', type: 'number' },
+        { key: 'Siap', label: 'Siap', type: 'number' },
+        { key: 'Jumlah PPM', label: 'Jumlah PPM', type: 'number', readOnly: true },
+        { 
+          key: 'Peratus', label: '% Siap', readOnly: true, 
+          render: (row) => {
+            const peratus = row['Jumlah PPM'] > 0 ? ((row['Siap'] / row['Jumlah PPM']) * 100) : 0;
+            return <ProgressBar peratus={peratus} />;
+          }
+        }
+      ];
+
+      const handleSaveEdit = (id, newRowData) => {
+        const ts = Number(newRowData['Tak Siap']) || 0;
+        const s = Number(newRowData['Siap']) || 0;
+        newRowData['Jumlah PPM'] = ts + s;
+        const updated = data.map(d => d.id === id ? { ...d, ...newRowData } : d);
+        setData(updated);
       };
 
-      const columns = [
-        { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true }, { key: 'Bulan', label: 'Bulan', type: 'text', readOnly: true }, { key: 'Penyenggara', label: 'Penyenggara', type: 'text', readOnly: true },
-        { key: 'Tak Siap', label: 'Tak Siap', type: 'number' }, { key: 'Siap', label: 'Siap', type: 'number' }, { key: 'Jumlah PPM', label: 'Jumlah PPM', type: 'number', readOnly: true },
-        { key: 'Peratus', label: '% Siap', readOnly: true, render: (row) => <ProgressBar peratus={row['Jumlah PPM']>0?((row['Siap']/row['Jumlah PPM'])*100):0} /> }
-      ];
+      const handleDelete = (id) => {
+        if(confirm("Padam rekod ini?")) setData(data.filter(d => d.id !== id));
+      };
 
       return (
         <div className="space-y-6 animate-fade-in">
           <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <FilterSelect label="Tahun" value={fTahun} options={['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)]} onChange={setFTahun} />
-            <FilterSelect label="Bulan Mula" value={fMula} options={['Semua', ...SenaraiBulan]} onChange={setFMula} />
-            <FilterSelect label="Bulan Akhir" value={fAkhir} options={['Semua', ...SenaraiBulan]} onChange={setFAkhir} />
-            <FilterSelect label="Penyenggara" value={fPeny} options={['Semua', ...Array.from(new Set(data.map(d=>d.Penyenggara))).filter(Boolean).sort()]} onChange={setFPeny} />
+            <FilterSelect label="Tahun" value={filterTahun} options={tahunOptions} onChange={setFilterTahun} />
+            <FilterSelect label="Bulan Mula" value={filterBulanMula} options={bulanOptions} onChange={setFilterBulanMula} />
+            <FilterSelect label="Bulan Akhir" value={filterBulanAkhir} options={bulanOptions} onChange={setFilterBulanAkhir} />
+            <FilterSelect label="Penyenggara" value={filterPenyenggara} options={penyenggaraOptions} onChange={setFilterPenyenggara} />
           </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricCard title="Jumlah PPM" value={met.j} color="text-purple-500" />
-            <MetricCard title="Siap" value={met.s} subtext={`${met.j>0?((met.s/met.j)*100).toFixed(1):0}%`} color="text-green-500" />
-            <MetricCard title="Tak Siap" value={met.ts} subtext={`${met.j>0?((met.ts/met.j)*100).toFixed(1):0}%`} color="text-red-500" />
-            <MetricCard title="% Siap Keseluruhan" value={`${met.j>0?((met.s/met.j)*100).toFixed(1):0}%`} color="text-indigo-500" />
+            <MetricCard title="Jumlah PPM" value={metrics.jumlah} color="text-purple-500" />
+            <MetricCard title="Siap" value={metrics.siap} subtext={`${metrics.peratus}%`} color="text-green-500" />
+            <MetricCard title="Tak Siap" value={metrics.takSiap} subtext={`${pTakSiap}%`} color="text-red-500" />
+            <MetricCard title="% Siap Keseluruhan" value={`${metrics.peratus}%`} color="text-indigo-500" />
           </div>
-          <EditableTable title="Rekod PPM (Live ke Google Sheet)" data={filtered} columns={columns} 
-            onSave={(idx, row) => {
-              row['Jumlah PPM'] = (Number(row['Tak Siap'])||0) + (Number(row['Siap'])||0);
-              updater(GID, idx, row, setter, data);
-            }} 
-            onDelete={(idx) => deleter(GID, idx)} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartCard title="Prestasi Penyenggara (PPM)">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chart1Data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="Siap" stackId="a" fill={colors.success} />
+                  <Bar dataKey="Tak Siap" stackId="a" fill={colors.danger} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard title="Trend Bulanan PPM">
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chart2Data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="Jumlah" stroke={colors.purple} strokeWidth={3} />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </div>
+
+          <EditableTable title="Rekod PPM" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
         </div>
       );
     };
 
     // ==========================================
-    // KONTRAKTOR DASHBOARD TAB
+    // 4. KONTRAKTOR DASHBOARD TAB
     // ==========================================
-    const KontraktorDashboard = ({ data, updater, deleter, setter, colors }) => {
-      const GID = 0;
-      const [fTahun, setFTahun] = useState('Semua');
-      const [fMula, setFMula] = useState('Semua');
-      const [fAkhir, setFAkhir] = useState('Semua');
-      const [fKon, setFKon] = useState('Semua');
+    const KontraktorDashboard = ({ data, setData, colors }) => {
+      const [filterTahun, setFilterTahun] = useState('Semua');
+      const [filterBulanMula, setFilterBulanMula] = useState('Semua');
+      const [filterBulanAkhir, setFilterBulanAkhir] = useState('Semua');
+      const [filterKontraktor, setFilterKontraktor] = useState('Semua');
+      const [filterZon, setFilterZon] = useState('Semua');
 
-      const filtered = useMemo(() => data.filter(d => {
-        let pB = true; 
-        if(fMula!=='Semua' && fAkhir!=='Semua') { const iD=SenaraiBulan.indexOf(d.Bulan); pB = (iD>=SenaraiBulan.indexOf(fMula) && iD<=SenaraiBulan.indexOf(fAkhir)); }
-        return (fTahun==='Semua'||String(d.Tahun)===String(fTahun)) && (fKon==='Semua'||d.Kontraktor===fKon) && pB;
-      }), [data, fTahun, fMula, fAkhir, fKon]);
+      const tahunOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)];
+      const bulanOptions = ['Semua', ...SenaraiBulan];
+      const kontraktorOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Kontraktor))).filter(Boolean).sort()];
+      const zonOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Zon))).filter(Boolean).sort()];
 
-      const met = { jDoket: filtered.reduce((acc, c) => acc + (Number(c['Jumlah Doket'])||0), 0), jRM: filtered.reduce((acc, c) => acc + (Number(c['Jumlah RM'])||0), 0), bil: new Set(filtered.map(d=>d.Kontraktor).filter(Boolean)).size };
+      const getBulanIndex = (b) => SenaraiBulan.indexOf(b);
+
+      const filteredData = useMemo(() => {
+        return data.filter(d => {
+          let passTahun = filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun);
+          let passKon = filterKontraktor === 'Semua' || d.Kontraktor === filterKontraktor;
+          let passZon = filterZon === 'Semua' || d.Zon === filterZon;
+          let passBulan = true;
+          if (filterBulanMula !== 'Semua' && filterBulanAkhir !== 'Semua') {
+            const idxD = getBulanIndex(d.Bulan);
+            const idxM = getBulanIndex(filterBulanMula);
+            const idxA = getBulanIndex(filterBulanAkhir);
+            if (idxD !== -1) passBulan = (idxD >= idxM && idxD <= idxA);
+          }
+          return passTahun && passKon && passZon && passBulan;
+        });
+      }, [data, filterTahun, filterBulanMula, filterBulanAkhir, filterKontraktor, filterZon]);
+
+      const metrics = {
+        jumlahDoket: filteredData.reduce((acc, curr) => acc + (Number(curr['Jumlah Doket']) || 0), 0),
+        jumlahRM: filteredData.reduce((acc, curr) => acc + (Number(curr['Jumlah RM']) || 0), 0),
+        bilKontraktor: new Set(filteredData.map(d=>d.Kontraktor).filter(Boolean)).size
+      };
+
+      const chart1Data = useMemo(() => {
+        const grouped = filteredData.reduce((acc, curr) => {
+          const k = curr.Kontraktor || 'Tiada';
+          acc[k] = (acc[k] || 0) + (Number(curr['Jumlah Doket']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] }));
+      }, [filteredData]);
+
+      const chart2Data = useMemo(() => {
+        const grouped = filteredData.reduce((acc, curr) => {
+          const k = curr.Kontraktor || 'Tiada';
+          acc[k] = (acc[k] || 0) + (Number(curr['Jumlah RM']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, RM: grouped[k] }));
+      }, [filteredData]);
 
       const columns = [
-        { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true }, { key: 'Bulan', label: 'Bulan', type: 'text', readOnly: true }, { key: 'Kontraktor', label: 'Kontraktor', type: 'text', readOnly: true },
-        { key: 'Zon', label: 'Zon', type: 'text', readOnly: true }, { key: 'Jumlah Doket', label: 'Jumlah Doket', type: 'number' }, { key: 'Jumlah RM', label: 'Jumlah RM', type: 'number' }
+        { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
+        { key: 'Bulan', label: 'Bulan', type: 'text', readOnly: true },
+        { key: 'Kontraktor', label: 'Kontraktor', type: 'text', readOnly: true },
+        { key: 'Zon', label: 'Zon', type: 'text', readOnly: true },
+        { key: 'Jumlah Doket', label: 'Jumlah Doket', type: 'number' },
+        { key: 'Jumlah RM', label: 'Jumlah RM (RM)', type: 'number' }
       ];
+
+      const handleSaveEdit = (id, newRowData) => {
+        const updated = data.map(d => d.id === id ? { ...d, ...newRowData } : d);
+        setData(updated);
+      };
+
+      const handleDelete = (id) => {
+        if(confirm("Padam rekod ini?")) setData(data.filter(d => d.id !== id));
+      };
 
       return (
         <div className="space-y-6 animate-fade-in">
           <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <FilterSelect label="Tahun" value={fTahun} options={['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)]} onChange={setFTahun} />
-            <FilterSelect label="Kontraktor" value={fKon} options={['Semua', ...Array.from(new Set(data.map(d=>d.Kontraktor))).filter(Boolean).sort()]} onChange={setFKon} />
+            <FilterSelect label="Tahun" value={filterTahun} options={tahunOptions} onChange={setFilterTahun} />
+            <FilterSelect label="Bulan Mula" value={filterBulanMula} options={bulanOptions} onChange={setFilterBulanMula} />
+            <FilterSelect label="Bulan Akhir" value={filterBulanAkhir} options={bulanOptions} onChange={setFilterBulanAkhir} />
+            <FilterSelect label="Kontraktor" value={filterKontraktor} options={kontraktorOptions} onChange={setFilterKontraktor} />
+            <FilterSelect label="Zon" value={filterZon} options={zonOptions} onChange={setFilterZon} />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MetricCard title="Jumlah Doket" value={met.jDoket} color="text-blue-500" />
-            <MetricCard title="Jumlah RM" value={`RM ${met.jRM.toLocaleString()}`} color="text-yellow-500" />
-            <MetricCard title="Bilangan Kontraktor" value={met.bil} color="text-indigo-500" />
+            <MetricCard title="Jumlah Doket" value={metrics.jumlahDoket} color="text-blue-500" />
+            <MetricCard title="Jumlah RM" value={`RM ${metrics.jumlahRM.toLocaleString()}`} color="text-yellow-500" />
+            <MetricCard title="Bilangan Kontraktor" value={metrics.bilKontraktor} color="text-indigo-500" />
           </div>
-          <EditableTable title="Rekod Kontraktor (Live ke Google Sheet)" data={filtered} columns={columns} onSave={(idx, row) => updater(GID, idx, row, setter, data)} onDelete={(idx) => deleter(GID, idx)} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartCard title="Doket Mengikut Kontraktor">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chart1Data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip />
+                  <Bar dataKey="Jumlah" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard title="Nilai RM Mengikut Kontraktor">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chart2Data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip />
+                  <Bar dataKey="RM" fill={colors.warning} name="Jumlah RM" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </div>
+
+          <EditableTable title="Rekod Kontraktor" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
         </div>
       );
     };
 
     // ==========================================
-    // TETAPAN (SETTINGS) TAB
+    // 5. TETAPAN (SETTINGS) TAB
     // ==========================================
     const Tetapan = ({ settings, setSettings }) => {
       const [formData, setFormData] = useState(settings);
-      const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-      const handleSave = () => { setSettings(formData); alert("Tetapan berjaya disimpan!"); };
+
+      const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+      };
+
+      const handleSave = () => {
+        setSettings(formData);
+        alert("Tetapan berjaya disimpan!");
+      };
 
       return (
-        <div className="max-w-2xl mx-auto space-y-6 animate-fade-in bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold flex items-center mb-4"><Icon name="Settings" className="mr-2" /> Tetapan Sistem</h2>
-          <div className="space-y-4">
-            <div className="space-y-1"><label className="text-sm font-medium">Nama Sistem</label><input type="text" name="systemName" value={formData.systemName} onChange={handleChange} className="w-full px-4 py-2 border rounded-md dark:bg-gray-700 outline-none" /></div>
-            <div className="space-y-1"><label className="text-sm font-medium">Nama Tab 1</label><input type="text" name="tabDV3" value={formData.tabDV3} onChange={handleChange} className="w-full px-4 py-2 border rounded-md dark:bg-gray-700 outline-none" /></div>
-            <div className="space-y-1"><label className="text-sm font-medium">Nama Tab 2</label><input type="text" name="tabPPM" value={formData.tabPPM} onChange={handleChange} className="w-full px-4 py-2 border rounded-md dark:bg-gray-700 outline-none" /></div>
-            <div className="space-y-1"><label className="text-sm font-medium">Nama Tab 3</label><input type="text" name="tabKontraktor" value={formData.tabKontraktor} onChange={handleChange} className="w-full px-4 py-2 border rounded-md dark:bg-gray-700 outline-none" /></div>
-            <button onClick={handleSave} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">Simpan Tetapan</button>
-            <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/30 rounded-md text-sm text-green-800 dark:text-green-200">
-              <strong>Nota Penting:</strong> Memandangkan aplikasi ini telah dipasang sebagai Web App, sebarang perubahan dalam jadual akan terus dikemas kini ke dalam Google Sheet anda!
+        <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold flex items-center">
+                <Icon name="Settings" className="mr-2" /> Tetapan Sistem
+              </h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Nama Sistem</label>
+                <input 
+                  type="text" 
+                  name="systemName"
+                  value={formData.systemName} 
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 outline-none" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Nama Tab 1 (Default: DV3)</label>
+                <input 
+                  type="text" 
+                  name="tabDV3"
+                  value={formData.tabDV3} 
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 outline-none" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Nama Tab 2 (Default: PPM)</label>
+                <input 
+                  type="text" 
+                  name="tabPPM"
+                  value={formData.tabPPM} 
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 outline-none" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Nama Tab 3 (Default: Kontraktor)</label>
+                <input 
+                  type="text" 
+                  name="tabKontraktor"
+                  value={formData.tabKontraktor} 
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 outline-none" 
+                />
+              </div>
+              
+              <button 
+                onClick={handleSave}
+                className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
+              >
+                Simpan Tetapan
+              </button>
+              
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-gray-700/50 rounded-md text-sm text-gray-600 dark:text-gray-300">
+                <strong>Nota:</strong> Perubahan jadual (Edit/Padam) disimpan sementara dalam pelayar ini sahaja dan tidak akan mengubah data asal di Google Sheets. Segar semula laman akan memuatkan semula data dari Google Sheets.
+              </div>
             </div>
           </div>
         </div>
       );
     };
 
+    // --- Render App ke DOM ---
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
