@@ -33,7 +33,7 @@
   <!-- Logik Aplikasi React -->
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
-    const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
+    const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts;
 
     // --- Pengganti ikon lucide-react ---
     const Icon = ({ name, size = 20, className = "" }) => {
@@ -504,60 +504,70 @@
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard title="Prestasi DV3 (Jumlah Doket Tahunan)">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart1Data}>
+                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip contentStyle={{ backgroundColor: 'var(--tw-bg-opacity)', color: 'black' }} />
-                  <Bar dataKey="value" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]}>
+                    <LabelList dataKey="value" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
             <ChartCard title={`Prestasi PPM (${filterTahun}) - Bulanan`}>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart2Data}>
+                <BarChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Bar dataKey="value" fill={colors.purple} name="Jumlah PPM" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" fill={colors.purple} name="Jumlah PPM" radius={[4, 4, 0, 0]}>
+                    <LabelList dataKey="value" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
             <ChartCard title="Nilai RM Kontraktor (Tahunan)">
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chart3Data}>
+                <LineChart data={chart3Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke={colors.warning} strokeWidth={3} name="Nilai RM" />
+                  <Line type="monotone" dataKey="value" stroke={colors.warning} strokeWidth={3} name="Nilai RM">
+                    <LabelList dataKey="value" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
+                  </Line>
                 </LineChart>
               </ResponsiveContainer>
             </ChartCard>
 
             <ChartCard title={`Ranking Penyenggara (% Siap DV3)`}>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart4Data} layout="vertical" margin={{ left: 50 }}>
+                <BarChart data={chart4Data} layout="vertical" margin={{ top: 20, right: 50, left: 50, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis type="number" domain={[0, 100]} stroke={colors.text} />
                   <YAxis type="category" dataKey="name" stroke={colors.text} width={100} />
                   <Tooltip />
-                  <Bar dataKey="peratus" fill={colors.success} name="% Siap" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="peratus" fill={colors.success} name="% Siap" radius={[0, 4, 4, 0]}>
+                    <LabelList dataKey="peratus" position="right" fill={colors.text} fontSize={12} formatter={(v) => `${v}%`} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
             <ChartCard title={`Ranking Kontraktor (Nilai RM)`} className="lg:col-span-2">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart5Data}>
+                <BarChart data={chart5Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Bar dataKey="RM" fill={colors.warning} name="Jumlah RM" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="RM" fill={colors.warning} name="Jumlah RM" radius={[4, 4, 0, 0]}>
+                    <LabelList dataKey="RM" position="top" angle={-90} offset={25} fill={colors.text} fontSize={12} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -680,26 +690,32 @@
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard title="Prestasi Penyenggara (Siap / Tak Siap)">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart1Data}>
+                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="Siap" stackId="a" fill={colors.success} />
-                  <Bar dataKey="Tak Siap" stackId="a" fill={colors.danger} />
+                  <Bar dataKey="Siap" stackId="a" fill={colors.success}>
+                    <LabelList dataKey="Siap" position="center" angle={-90} fill="#fff" fontSize={11} formatter={(v)=> v > 0 ? v : ''} />
+                  </Bar>
+                  <Bar dataKey="Tak Siap" stackId="a" fill={colors.danger}>
+                    <LabelList dataKey="Tak Siap" position="center" angle={-90} fill="#fff" fontSize={11} formatter={(v)=> v > 0 ? v : ''} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
             <ChartCard title="Trend Tahunan DV3">
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chart2Data}>
+                <LineChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="Jumlah" stroke={colors.primary} strokeWidth={3} />
+                  <Line type="monotone" dataKey="Jumlah" stroke={colors.primary} strokeWidth={3}>
+                    <LabelList dataKey="Jumlah" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
+                  </Line>
                 </LineChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -816,26 +832,32 @@
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard title="Prestasi Penyenggara (PPM)">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart1Data}>
+                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="Siap" stackId="a" fill={colors.success} />
-                  <Bar dataKey="Tak Siap" stackId="a" fill={colors.danger} />
+                  <Bar dataKey="Siap" stackId="a" fill={colors.success}>
+                    <LabelList dataKey="Siap" position="center" angle={-90} fill="#fff" fontSize={11} formatter={(v)=> v > 0 ? v : ''} />
+                  </Bar>
+                  <Bar dataKey="Tak Siap" stackId="a" fill={colors.danger}>
+                    <LabelList dataKey="Tak Siap" position="center" angle={-90} fill="#fff" fontSize={11} formatter={(v)=> v > 0 ? v : ''} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
             <ChartCard title="Trend Bulanan PPM">
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chart2Data}>
+                <LineChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="Jumlah" stroke={colors.purple} strokeWidth={3} />
+                  <Line type="monotone" dataKey="Jumlah" stroke={colors.purple} strokeWidth={3}>
+                    <LabelList dataKey="Jumlah" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
+                  </Line>
                 </LineChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -940,24 +962,28 @@
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard title="Doket Mengikut Kontraktor">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart1Data}>
+                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Bar dataKey="Jumlah" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Jumlah" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]}>
+                    <LabelList dataKey="Jumlah" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
             <ChartCard title="Nilai RM Mengikut Kontraktor">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart2Data}>
+                <BarChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Bar dataKey="RM" fill={colors.warning} name="Jumlah RM" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="RM" fill={colors.warning} name="Jumlah RM" radius={[4, 4, 0, 0]}>
+                    <LabelList dataKey="RM" position="top" angle={-90} offset={25} fill={colors.text} fontSize={12} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
