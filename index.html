@@ -576,7 +576,7 @@
                 <BarChart data={chart4Data} layout="vertical" margin={{ top: 20, right: 50, left: 50, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis type="number" domain={[0, 100]} stroke={colors.text} />
-                  <YAxis type="category" dataKey="name" stroke={colors.text} width={50} />
+                  <YAxis type="category" dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: 0, textAnchor: 'end' }} height={60} />
                   <Tooltip />
                   <Bar dataKey="peratus" fill={colors.success} name="% Siap" radius={[0, 4, 4, 0]}>
                     <LabelList dataKey="peratus" position="right" fill={colors.text} fontSize={12} formatter={(v) => `${v}%`} />
