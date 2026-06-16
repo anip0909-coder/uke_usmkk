@@ -33,7 +33,7 @@
   <!-- Logik Aplikasi React -->
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
-    const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts;
+    const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts;
 
     // --- Pengganti ikon lucide-react ---
     const Icon = ({ name, size = 20, className = "" }) => {
@@ -62,6 +62,14 @@
     const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbytiLV-DMFyvOVEjAXC0lnoMiuIy79-OkOlOCk_sEWuiO-mDWPZgd8EzAAxL54sPL4b/exec";
 
     const SenaraiBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
+
+    // Pembantu global untuk memastikan turutan bulan yang mantap
+    const getBulanIndex = (b) => {
+      if (!b) return 99;
+      const str = String(b).trim().toLowerCase();
+      const idx = SenaraiBulan.findIndex(x => x.toLowerCase() === str);
+      return idx !== -1 ? idx : 99;
+    };
 
     function App() {
       const [darkMode, setDarkMode] = useState(false);
@@ -447,7 +455,8 @@
           acc[month] = (acc[month] || 0) + (Number(curr['Jumlah PPM']) || 0);
           return acc;
         }, {});
-        return Object.keys(grouped).map(k => ({ name: k, value: grouped[k] }));
+        return Object.keys(grouped).map(k => ({ name: k, value: grouped[k] }))
+          .sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
       }, [fPpm]);
 
       const chart3Data = useMemo(() => {
@@ -581,47 +590,59 @@
     // ==========================================
     const DV3Dashboard = ({ data, updater, deleter, setter, colors }) => {
       const GID = 2136024607;
+      
+      // Penapis Utama (Untuk Metrik & Carta)
       const [filterTahun, setFilterTahun] = useState('Semua');
       const [filterBulanMula, setFilterBulanMula] = useState('Semua');
       const [filterBulanAkhir, setFilterBulanAkhir] = useState('Semua');
       const [filterPenyenggara, setFilterPenyenggara] = useState('Semua');
 
+      // Penapis Khusus (Untuk Jadual Rekod)
+      const [tTahun, setTTahun] = useState('Semua');
+      const [tBulan, setTBulan] = useState('Semua');
+      const [tPeny, setTPeny] = useState('Semua');
+
       const tahunOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)];
       const bulanOptions = ['Semua', ...SenaraiBulan];
       const penyenggaraOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Penyenggara))).filter(Boolean).sort()];
 
-      const getBulanIndex = (b) => SenaraiBulan.indexOf(b);
-
-      const filteredData = useMemo(() => {
+      const globalFiltered = useMemo(() => {
         return data.filter(d => {
           let passTahun = filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun);
-          let passPenyenggara = filterPenyenggara === 'Semua' || d.Penyenggara === filterPenyenggara;
-          
+          let passPenyenggara = filterPenyenggara === 'Semua' || String(d.Penyenggara).trim() === String(filterPenyenggara).trim();
           let passBulan = true;
           if (filterBulanMula !== 'Semua' && filterBulanAkhir !== 'Semua') {
             const idxD = getBulanIndex(d.Bulan);
             const idxM = getBulanIndex(filterBulanMula);
             const idxA = getBulanIndex(filterBulanAkhir);
-            if (idxD !== -1) {
-              passBulan = (idxD >= idxM && idxD <= idxA);
-            }
+            if (idxD !== 99) passBulan = (idxD >= idxM && idxD <= idxA);
           }
           return passTahun && passPenyenggara && passBulan;
         });
       }, [data, filterTahun, filterBulanMula, filterBulanAkhir, filterPenyenggara]);
 
+      const tableFiltered = useMemo(() => {
+        return data.filter(d => {
+          const passTahun = tTahun === 'Semua' || String(d.Tahun) === String(tTahun);
+          const passBulan = tBulan === 'Semua' || String(d.Bulan).trim().toLowerCase() === String(tBulan).toLowerCase();
+          const passPeny = tPeny === 'Semua' || String(d.Penyenggara).trim() === String(tPeny).trim();
+          return passTahun && passBulan && passPeny;
+        });
+      }, [data, tTahun, tBulan, tPeny]);
+
       const metrics = {
-        jumlah: filteredData.reduce((acc, curr) => acc + (Number(curr['Jumlah Doket']) || 0), 0),
-        siap: filteredData.reduce((acc, curr) => acc + (Number(curr['Siap']) || 0), 0),
-        takSiap: filteredData.reduce((acc, curr) => acc + (Number(curr['Tak Siap']) || 0), 0),
-        batal: filteredData.reduce((acc, curr) => acc + (Number(curr['Batal']) || 0), 0),
+        jumlah: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Jumlah Doket']) || 0), 0),
+        siap: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Siap']) || 0), 0),
+        takSiap: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Tak Siap']) || 0), 0),
+        batal: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Batal']) || 0), 0),
       };
       metrics.peratus = metrics.jumlah > 0 ? ((metrics.siap / metrics.jumlah) * 100).toFixed(1) : 0;
       const pTakSiap = metrics.jumlah > 0 ? ((metrics.takSiap / metrics.jumlah) * 100).toFixed(1) : 0;
       const pBatal = metrics.jumlah > 0 ? ((metrics.batal / metrics.jumlah) * 100).toFixed(1) : 0;
 
+      // Carta 1: Prestasi Penyenggara
       const chart1Data = useMemo(() => {
-        const grouped = filteredData.reduce((acc, curr) => {
+        const grouped = globalFiltered.reduce((acc, curr) => {
           const p = curr.Penyenggara || 'Tiada';
           if(!acc[p]) acc[p] = { name: p, Siap: 0, 'Tak Siap': 0 };
           acc[p].Siap += (Number(curr['Siap']) || 0);
@@ -629,8 +650,9 @@
           return acc;
         }, {});
         return Object.values(grouped);
-      }, [filteredData]);
+      }, [globalFiltered]);
 
+      // Carta 2: Trend Tahunan (Sentiasa guna semua data supaya perbandingan tahunan logik)
       const chart2Data = useMemo(() => {
         const grouped = data.reduce((acc, curr) => {
           const t = curr.Tahun || 'Tiada';
@@ -639,6 +661,17 @@
         }, {});
         return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] })).sort((a,b)=>a.name - b.name);
       }, [data]);
+
+      // CARTA 3 BAHARU: Jumlah Doket vs Bulan
+      const chart3Data = useMemo(() => {
+        const grouped = globalFiltered.reduce((acc, curr) => {
+          const b = curr.Bulan ? String(curr.Bulan).trim() : 'Tiada';
+          acc[b] = (acc[b] || 0) + (Number(curr['Jumlah Doket']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] }))
+          .sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
+      }, [globalFiltered]);
 
       const columns = [
         { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
@@ -662,17 +695,16 @@
         const s = Number(newRowData['Siap']) || 0;
         const b = Number(newRowData['Batal']) || 0;
         newRowData['Jumlah Doket'] = ts + s + b;
-
         updater(GID, rowNumber, newRowData, setter, data);
       };
 
-      const handleDelete = (rowNumber) => {
-        deleter(GID, rowNumber, setter, data);
-      };
+      const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
 
       return (
         <div className="space-y-6 animate-fade-in">
+          {/* Top Global Filter */}
           <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <div className="w-full text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Penapis Utama Dashboard (Carta & Metrik)</div>
             <FilterSelect label="Tahun" value={filterTahun} options={tahunOptions} onChange={setFilterTahun} />
             <FilterSelect label="Bulan Mula" value={filterBulanMula} options={bulanOptions} onChange={setFilterBulanMula} />
             <FilterSelect label="Bulan Akhir" value={filterBulanAkhir} options={bulanOptions} onChange={setFilterBulanAkhir} />
@@ -719,9 +751,33 @@
                 </LineChart>
               </ResponsiveContainer>
             </ChartCard>
+
+            <ChartCard title="Jumlah Doket vs Bulan" className="lg:col-span-2">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chart3Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip />
+                  <Bar dataKey="Jumlah" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]}>
+                    <LabelList dataKey="Jumlah" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
           </div>
 
-          <EditableTable title="Jadual Rekod DV3 (Pautan ke Google Sheet)" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+          <div className="mt-8">
+            <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-t-lg border-b dark:border-gray-700">
+              <div className="w-full text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Penapis Khusus Jadual Rekod DV3</div>
+              <FilterSelect label="Tahun" value={tTahun} options={tahunOptions} onChange={setTTahun} />
+              <FilterSelect label="Bulan" value={tBulan} options={bulanOptions} onChange={setTBulan} />
+              <FilterSelect label="Penyenggara" value={tPeny} options={penyenggaraOptions} onChange={setTPeny} />
+            </div>
+            <div className="-mt-6">
+              <EditableTable title="Jadual Rekod DV3 (Pautan ke Google Sheet)" data={tableFiltered} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+            </div>
+          </div>
         </div>
       );
     };
@@ -732,42 +788,54 @@
     // ==========================================
     const PPMDashboard = ({ data, updater, deleter, setter, colors }) => {
       const GID = 1093378707;
+      
       const [filterTahun, setFilterTahun] = useState('Semua');
       const [filterBulanMula, setFilterBulanMula] = useState('Semua');
       const [filterBulanAkhir, setFilterBulanAkhir] = useState('Semua');
       const [filterPenyenggara, setFilterPenyenggara] = useState('Semua');
 
+      const [tTahun, setTTahun] = useState('Semua');
+      const [tBulan, setTBulan] = useState('Semua');
+      const [tPeny, setTPeny] = useState('Semua');
+
       const tahunOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)];
       const bulanOptions = ['Semua', ...SenaraiBulan];
       const penyenggaraOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Penyenggara))).filter(Boolean).sort()];
 
-      const getBulanIndex = (b) => SenaraiBulan.indexOf(b);
-
-      const filteredData = useMemo(() => {
+      const globalFiltered = useMemo(() => {
         return data.filter(d => {
           let passTahun = filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun);
-          let passPenyenggara = filterPenyenggara === 'Semua' || d.Penyenggara === filterPenyenggara;
+          let passPenyenggara = filterPenyenggara === 'Semua' || String(d.Penyenggara).trim() === String(filterPenyenggara).trim();
           let passBulan = true;
           if (filterBulanMula !== 'Semua' && filterBulanAkhir !== 'Semua') {
             const idxD = getBulanIndex(d.Bulan);
             const idxM = getBulanIndex(filterBulanMula);
             const idxA = getBulanIndex(filterBulanAkhir);
-            if (idxD !== -1) passBulan = (idxD >= idxM && idxD <= idxA);
+            if (idxD !== 99) passBulan = (idxD >= idxM && idxD <= idxA);
           }
           return passTahun && passPenyenggara && passBulan;
         });
       }, [data, filterTahun, filterBulanMula, filterBulanAkhir, filterPenyenggara]);
 
+      const tableFiltered = useMemo(() => {
+        return data.filter(d => {
+          const passTahun = tTahun === 'Semua' || String(d.Tahun) === String(tTahun);
+          const passBulan = tBulan === 'Semua' || String(d.Bulan).trim().toLowerCase() === String(tBulan).toLowerCase();
+          const passPeny = tPeny === 'Semua' || String(d.Penyenggara).trim() === String(tPeny).trim();
+          return passTahun && passBulan && passPeny;
+        });
+      }, [data, tTahun, tBulan, tPeny]);
+
       const metrics = {
-        jumlah: filteredData.reduce((acc, curr) => acc + (Number(curr['Jumlah PPM']) || 0), 0),
-        siap: filteredData.reduce((acc, curr) => acc + (Number(curr['Siap']) || 0), 0),
-        takSiap: filteredData.reduce((acc, curr) => acc + (Number(curr['Tak Siap']) || 0), 0),
+        jumlah: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Jumlah PPM']) || 0), 0),
+        siap: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Siap']) || 0), 0),
+        takSiap: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Tak Siap']) || 0), 0),
       };
       metrics.peratus = metrics.jumlah > 0 ? ((metrics.siap / metrics.jumlah) * 100).toFixed(1) : 0;
       const pTakSiap = metrics.jumlah > 0 ? ((metrics.takSiap / metrics.jumlah) * 100).toFixed(1) : 0;
 
       const chart1Data = useMemo(() => {
-        const grouped = filteredData.reduce((acc, curr) => {
+        const grouped = globalFiltered.reduce((acc, curr) => {
           const p = curr.Penyenggara || 'Tiada';
           if(!acc[p]) acc[p] = { name: p, Siap: 0, 'Tak Siap': 0 };
           acc[p].Siap += (Number(curr['Siap']) || 0);
@@ -775,16 +843,17 @@
           return acc;
         }, {});
         return Object.values(grouped);
-      }, [filteredData]);
+      }, [globalFiltered]);
 
+      // Betulkan urutan carta 2 menggunakan helper getBulanIndex
       const chart2Data = useMemo(() => {
-        const grouped = filteredData.reduce((acc, curr) => {
-          const b = curr.Bulan || 'Tiada';
+        const grouped = globalFiltered.reduce((acc, curr) => {
+          const b = curr.Bulan ? String(curr.Bulan).trim() : 'Tiada';
           acc[b] = (acc[b] || 0) + (Number(curr['Jumlah PPM']) || 0);
           return acc;
         }, {});
         return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] })).sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
-      }, [filteredData]);
+      }, [globalFiltered]);
 
       const columns = [
         { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
@@ -809,13 +878,12 @@
         updater(GID, rowNumber, newRowData, setter, data);
       };
 
-      const handleDelete = (rowNumber) => {
-        deleter(GID, rowNumber, setter, data);
-      };
+      const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
 
       return (
         <div className="space-y-6 animate-fade-in">
           <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+             <div className="w-full text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Penapis Utama Dashboard (Carta & Metrik)</div>
             <FilterSelect label="Tahun" value={filterTahun} options={tahunOptions} onChange={setFilterTahun} />
             <FilterSelect label="Bulan Mula" value={filterBulanMula} options={bulanOptions} onChange={setFilterBulanMula} />
             <FilterSelect label="Bulan Akhir" value={filterBulanAkhir} options={bulanOptions} onChange={setFilterBulanAkhir} />
@@ -863,7 +931,17 @@
             </ChartCard>
           </div>
 
-          <EditableTable title="Rekod PPM (Pautan ke Google Sheet)" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+          <div className="mt-8">
+            <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-t-lg border-b dark:border-gray-700">
+              <div className="w-full text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Penapis Khusus Jadual Rekod PPM</div>
+              <FilterSelect label="Tahun" value={tTahun} options={tahunOptions} onChange={setTTahun} />
+              <FilterSelect label="Bulan" value={tBulan} options={bulanOptions} onChange={setTBulan} />
+              <FilterSelect label="Penyenggara" value={tPeny} options={penyenggaraOptions} onChange={setTPeny} />
+            </div>
+            <div className="-mt-6">
+              <EditableTable title="Rekod PPM (Pautan ke Google Sheet)" data={tableFiltered} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+            </div>
+          </div>
         </div>
       );
     };
@@ -873,58 +951,80 @@
     // ==========================================
     const KontraktorDashboard = ({ data, updater, deleter, setter, colors }) => {
       const GID = 0;
+      
       const [filterTahun, setFilterTahun] = useState('Semua');
       const [filterBulanMula, setFilterBulanMula] = useState('Semua');
       const [filterBulanAkhir, setFilterBulanAkhir] = useState('Semua');
       const [filterKontraktor, setFilterKontraktor] = useState('Semua');
       const [filterZon, setFilterZon] = useState('Semua');
 
+      const [tTahun, setTTahun] = useState('Semua');
+      const [tBulan, setTBulan] = useState('Semua');
+      const [tKon, setTKon] = useState('Semua');
+
       const tahunOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)];
       const bulanOptions = ['Semua', ...SenaraiBulan];
       const kontraktorOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Kontraktor))).filter(Boolean).sort()];
       const zonOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Zon))).filter(Boolean).sort()];
 
-      const getBulanIndex = (b) => SenaraiBulan.indexOf(b);
-
-      const filteredData = useMemo(() => {
+      const globalFiltered = useMemo(() => {
         return data.filter(d => {
           let passTahun = filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun);
-          let passKon = filterKontraktor === 'Semua' || d.Kontraktor === filterKontraktor;
-          let passZon = filterZon === 'Semua' || d.Zon === filterZon;
+          let passKon = filterKontraktor === 'Semua' || String(d.Kontraktor).trim() === String(filterKontraktor).trim();
+          let passZon = filterZon === 'Semua' || String(d.Zon).trim() === String(filterZon).trim();
           let passBulan = true;
           if (filterBulanMula !== 'Semua' && filterBulanAkhir !== 'Semua') {
             const idxD = getBulanIndex(d.Bulan);
             const idxM = getBulanIndex(filterBulanMula);
             const idxA = getBulanIndex(filterBulanAkhir);
-            if (idxD !== -1) passBulan = (idxD >= idxM && idxD <= idxA);
+            if (idxD !== 99) passBulan = (idxD >= idxM && idxD <= idxA);
           }
           return passTahun && passKon && passZon && passBulan;
         });
       }, [data, filterTahun, filterBulanMula, filterBulanAkhir, filterKontraktor, filterZon]);
 
+      const tableFiltered = useMemo(() => {
+        return data.filter(d => {
+          const passTahun = tTahun === 'Semua' || String(d.Tahun) === String(tTahun);
+          const passBulan = tBulan === 'Semua' || String(d.Bulan).trim().toLowerCase() === String(tBulan).toLowerCase();
+          const passKon = tKon === 'Semua' || String(d.Kontraktor).trim() === String(tKon).trim();
+          return passTahun && passBulan && passKon;
+        });
+      }, [data, tTahun, tBulan, tKon]);
+
       const metrics = {
-        jumlahDoket: filteredData.reduce((acc, curr) => acc + (Number(curr['Jumlah Doket']) || 0), 0),
-        jumlahRM: filteredData.reduce((acc, curr) => acc + (Number(curr['Jumlah RM']) || 0), 0),
-        bilKontraktor: new Set(filteredData.map(d=>d.Kontraktor).filter(Boolean)).size
+        jumlahDoket: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Jumlah Doket']) || 0), 0),
+        jumlahRM: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Jumlah RM']) || 0), 0),
+        bilKontraktor: new Set(globalFiltered.map(d=>d.Kontraktor).filter(Boolean)).size
       };
 
       const chart1Data = useMemo(() => {
-        const grouped = filteredData.reduce((acc, curr) => {
+        const grouped = globalFiltered.reduce((acc, curr) => {
           const k = curr.Kontraktor || 'Tiada';
           acc[k] = (acc[k] || 0) + (Number(curr['Jumlah Doket']) || 0);
           return acc;
         }, {});
         return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] }));
-      }, [filteredData]);
+      }, [globalFiltered]);
 
       const chart2Data = useMemo(() => {
-        const grouped = filteredData.reduce((acc, curr) => {
+        const grouped = globalFiltered.reduce((acc, curr) => {
           const k = curr.Kontraktor || 'Tiada';
           acc[k] = (acc[k] || 0) + (Number(curr['Jumlah RM']) || 0);
           return acc;
         }, {});
         return Object.keys(grouped).map(k => ({ name: k, RM: grouped[k] }));
-      }, [filteredData]);
+      }, [globalFiltered]);
+
+      // CARTA PAI: Peratusan RM bagi Zon
+      const chart3Data = useMemo(() => {
+        const grouped = globalFiltered.reduce((acc, curr) => {
+          const z = curr.Zon ? String(curr.Zon).trim() : 'Lain-lain';
+          acc[z] = (acc[z] || 0) + (Number(curr['Jumlah RM']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, value: grouped[k] }));
+      }, [globalFiltered]);
 
       const columns = [
         { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
@@ -935,17 +1035,13 @@
         { key: 'Jumlah RM', label: 'Jumlah RM (RM)', type: 'number' }
       ];
 
-      const handleSaveEdit = (rowNumber, newRowData) => {
-        updater(GID, rowNumber, newRowData, setter, data);
-      };
-
-      const handleDelete = (rowNumber) => {
-        deleter(GID, rowNumber, setter, data);
-      };
+      const handleSaveEdit = (rowNumber, newRowData) => updater(GID, rowNumber, newRowData, setter, data);
+      const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
 
       return (
         <div className="space-y-6 animate-fade-in">
           <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <div className="w-full text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Penapis Utama Dashboard (Carta & Metrik)</div>
             <FilterSelect label="Tahun" value={filterTahun} options={tahunOptions} onChange={setFilterTahun} />
             <FilterSelect label="Bulan Mula" value={filterBulanMula} options={bulanOptions} onChange={setFilterBulanMula} />
             <FilterSelect label="Bulan Akhir" value={filterBulanAkhir} options={bulanOptions} onChange={setFilterBulanAkhir} />
@@ -987,9 +1083,41 @@
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
+
+            <ChartCard title="% RM Mengikut Zon" className="lg:col-span-2">
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={chart3Data}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                    outerRadius={100}
+                    dataKey="value"
+                  >
+                    {chart3Data.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={[colors.primary, colors.warning, colors.success, colors.purple, colors.danger][index % 5]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `RM ${value.toLocaleString()}`} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartCard>
           </div>
 
-          <EditableTable title="Rekod Kontraktor (Pautan ke Google Sheet)" data={filteredData} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+          <div className="mt-8">
+            <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-t-lg border-b dark:border-gray-700">
+              <div className="w-full text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Penapis Khusus Jadual Rekod Kontraktor</div>
+              <FilterSelect label="Tahun" value={tTahun} options={tahunOptions} onChange={setTTahun} />
+              <FilterSelect label="Bulan" value={tBulan} options={bulanOptions} onChange={setTBulan} />
+              <FilterSelect label="Kontraktor" value={tKon} options={kontraktorOptions} onChange={setTKon} />
+            </div>
+            <div className="-mt-6">
+              <EditableTable title="Rekod Kontraktor (Pautan ke Google Sheet)" data={tableFiltered} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+            </div>
+          </div>
         </div>
       );
     };
