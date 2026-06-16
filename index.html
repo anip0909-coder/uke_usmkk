@@ -63,12 +63,14 @@
 
     const SenaraiBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
 
-    // Pembantu global untuk memastikan turutan bulan yang mantap
+    // Pembantu global untuk memastikan turutan bulan yang mantap (termasuk shortnames jika perlu)
     const getBulanIndex = (b) => {
       if (!b) return 99;
       const str = String(b).trim().toLowerCase();
       const idx = SenaraiBulan.findIndex(x => x.toLowerCase() === str);
-      return idx !== -1 ? idx : 99;
+      if (idx !== -1) return idx;
+      const shortIdx = SenaraiBulan.findIndex(x => x.toLowerCase().startsWith(str.substring(0,3)));
+      return shortIdx !== -1 ? shortIdx : 99;
     };
 
     function App() {
@@ -298,9 +300,9 @@
       </div>
     );
 
-    const ProgressBar = ({ peratus }) => {
+    const ProgressBar = ({ peratus, decimals = 2 }) => {
       const peratusNum = Number(peratus) || 0;
-      const formatted = peratusNum.toFixed(1);
+      const formatted = peratusNum.toFixed(decimals);
       let colorClass = 'bg-blue-500';
       
       if (peratusNum >= 80) colorClass = 'bg-green-500';
@@ -309,7 +311,7 @@
 
       return (
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium min-w-[3rem] text-right">{formatted}%</span>
+          <span className="text-sm font-medium min-w-[3.5rem] text-right">{formatted}%</span>
           <div className="w-full max-w-[100px] bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden">
             <div className={`${colorClass} h-2.5 rounded-full`} style={{ width: `${Math.min(peratusNum, 100)}%` }}></div>
           </div>
@@ -333,7 +335,7 @@
       };
 
       const saveEdit = () => {
-        onSave(editForm._rowNumber, editForm); // Menggunakan _rowNumber ke backend
+        onSave(editForm._rowNumber, editForm); 
         setEditingId(null);
       };
 
@@ -436,9 +438,9 @@
       const mJumlahPPM = fPpm.reduce((acc, curr) => acc + (Number(curr['Jumlah PPM']) || 0), 0);
       const mJumlahRM = fKon.reduce((acc, curr) => acc + (Number(curr['Jumlah RM']) || 0), 0);
 
-      const pSiap = mJumlahDoket > 0 ? ((mSiap / mJumlahDoket) * 100).toFixed(1) : 0;
-      const pTakSiap = mJumlahDoket > 0 ? ((mTakSiap / mJumlahDoket) * 100).toFixed(1) : 0;
-      const pBatal = mJumlahDoket > 0 ? ((mBatal / mJumlahDoket) * 100).toFixed(1) : 0;
+      const pSiap = mJumlahDoket > 0 ? ((mSiap / mJumlahDoket) * 100).toFixed(2) : "0.00";
+      const pTakSiap = mJumlahDoket > 0 ? ((mTakSiap / mJumlahDoket) * 100).toFixed(2) : "0.00";
+      const pBatal = mJumlahDoket > 0 ? ((mBatal / mJumlahDoket) * 100).toFixed(2) : "0.00";
 
       const chart1Data = useMemo(() => {
         const grouped = dv3.reduce((acc, curr) => {
@@ -478,7 +480,7 @@
         }, {});
         return Object.keys(grouped).map(k => ({
           name: k,
-          peratus: grouped[k].jumlah > 0 ? ((grouped[k].siap / grouped[k].jumlah) * 100).toFixed(1) : 0
+          peratus: grouped[k].jumlah > 0 ? ((grouped[k].siap / grouped[k].jumlah) * 100).toFixed(2) : 0
         })).sort((a,b) => b.peratus - a.peratus).slice(0, 10);
       }, [fDv3]);
 
@@ -493,6 +495,22 @@
           RM: grouped[k]
         })).sort((a,b) => b.RM - a.RM).slice(0, 10);
       }, [fKon]);
+
+      // Jadual PPM Keseluruhan
+      const ppmTableData = useMemo(() => {
+        const grouped = fPpm.reduce((acc, curr) => {
+          const p = curr.Penyenggara || 'Tiada Nama';
+          if (!acc[p]) acc[p] = { Penyenggara: p, Siap: 0, TakSiap: 0, JumlahPPM: 0 };
+          acc[p].Siap += (Number(curr['Siap']) || 0);
+          acc[p].TakSiap += (Number(curr['Tak Siap']) || 0);
+          acc[p].JumlahPPM += (Number(curr['Jumlah PPM']) || 0);
+          return acc;
+        }, {});
+        return Object.values(grouped).map(item => ({
+          ...item,
+          PeratusNum: item.JumlahPPM > 0 ? ((item.Siap / item.JumlahPPM) * 100) : 0
+        })).sort((a,b) => b.PeratusNum - a.PeratusNum);
+      }, [fPpm]);
 
       return (
         <div className="space-y-6 animate-fade-in">
@@ -581,6 +599,39 @@
               </ResponsiveContainer>
             </ChartCard>
           </div>
+
+          <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Jadual Prestasi Penyenggara (PPM) Keseluruhan</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-300">
+                  <tr>
+                    <th className="px-4 py-3">Penyenggara</th>
+                    <th className="px-4 py-3 text-center">Jumlah PPM</th>
+                    <th className="px-4 py-3 text-center">Siap</th>
+                    <th className="px-4 py-3 text-center">Tak Siap</th>
+                    <th className="px-4 py-3">% Siap</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ppmTableData.map((row, i) => (
+                    <tr key={i} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="px-4 py-2 font-medium">{row.Penyenggara}</td>
+                      <td className="px-4 py-2 text-center">{row.JumlahPPM}</td>
+                      <td className="px-4 py-2 text-center text-green-600 font-semibold">{row.Siap}</td>
+                      <td className="px-4 py-2 text-center text-red-600 font-semibold">{row.TakSiap}</td>
+                      <td className="px-4 py-2"><ProgressBar peratus={row.PeratusNum} decimals={2} /></td>
+                    </tr>
+                  ))}
+                  {ppmTableData.length === 0 && (
+                    <tr><td colSpan="5" className="text-center py-4 text-gray-500">Tiada data dijumpai</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       );
     };
@@ -591,13 +642,11 @@
     const DV3Dashboard = ({ data, updater, deleter, setter, colors }) => {
       const GID = 2136024607;
       
-      // Penapis Utama (Untuk Metrik & Carta)
       const [filterTahun, setFilterTahun] = useState('Semua');
       const [filterBulanMula, setFilterBulanMula] = useState('Semua');
       const [filterBulanAkhir, setFilterBulanAkhir] = useState('Semua');
       const [filterPenyenggara, setFilterPenyenggara] = useState('Semua');
 
-      // Penapis Khusus (Untuk Jadual Rekod)
       const [tTahun, setTTahun] = useState('Semua');
       const [tBulan, setTBulan] = useState('Semua');
       const [tPeny, setTPeny] = useState('Semua');
@@ -636,11 +685,10 @@
         takSiap: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Tak Siap']) || 0), 0),
         batal: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Batal']) || 0), 0),
       };
-      metrics.peratus = metrics.jumlah > 0 ? ((metrics.siap / metrics.jumlah) * 100).toFixed(1) : 0;
-      const pTakSiap = metrics.jumlah > 0 ? ((metrics.takSiap / metrics.jumlah) * 100).toFixed(1) : 0;
-      const pBatal = metrics.jumlah > 0 ? ((metrics.batal / metrics.jumlah) * 100).toFixed(1) : 0;
+      metrics.peratus = metrics.jumlah > 0 ? ((metrics.siap / metrics.jumlah) * 100).toFixed(2) : "0.00";
+      const pTakSiap = metrics.jumlah > 0 ? ((metrics.takSiap / metrics.jumlah) * 100).toFixed(2) : "0.00";
+      const pBatal = metrics.jumlah > 0 ? ((metrics.batal / metrics.jumlah) * 100).toFixed(2) : "0.00";
 
-      // Carta 1: Prestasi Penyenggara
       const chart1Data = useMemo(() => {
         const grouped = globalFiltered.reduce((acc, curr) => {
           const p = curr.Penyenggara || 'Tiada';
@@ -652,7 +700,6 @@
         return Object.values(grouped);
       }, [globalFiltered]);
 
-      // Carta 2: Trend Tahunan (Sentiasa guna semua data supaya perbandingan tahunan logik)
       const chart2Data = useMemo(() => {
         const grouped = data.reduce((acc, curr) => {
           const t = curr.Tahun || 'Tiada';
@@ -661,17 +708,6 @@
         }, {});
         return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] })).sort((a,b)=>a.name - b.name);
       }, [data]);
-
-      // CARTA 3 BAHARU: Jumlah Doket vs Bulan
-      const chart3Data = useMemo(() => {
-        const grouped = globalFiltered.reduce((acc, curr) => {
-          const b = curr.Bulan ? String(curr.Bulan).trim() : 'Tiada';
-          acc[b] = (acc[b] || 0) + (Number(curr['Jumlah Doket']) || 0);
-          return acc;
-        }, {});
-        return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] }))
-          .sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
-      }, [globalFiltered]);
 
       const columns = [
         { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
@@ -685,7 +721,7 @@
           key: 'Peratus', label: '% Siap', readOnly: true, 
           render: (row) => {
             const peratus = row['Jumlah Doket'] > 0 ? ((row['Siap'] / row['Jumlah Doket']) * 100) : 0;
-            return <ProgressBar peratus={peratus} />;
+            return <ProgressBar peratus={peratus} decimals={2} />;
           }
         }
       ];
@@ -702,7 +738,6 @@
 
       return (
         <div className="space-y-6 animate-fade-in">
-          {/* Top Global Filter */}
           <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <div className="w-full text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Penapis Utama Dashboard (Carta & Metrik)</div>
             <FilterSelect label="Tahun" value={filterTahun} options={tahunOptions} onChange={setFilterTahun} />
@@ -722,12 +757,12 @@
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard title="Prestasi Penyenggara (Siap / Tak Siap)">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
+                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} />
+                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={60} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Legend />
+                  <Legend verticalAlign="top" height={36}/>
                   <Bar dataKey="Siap" stackId="a" fill={colors.success}>
                     <LabelList dataKey="Siap" position="center" angle={-90} fill="#fff" fontSize={11} formatter={(v)=> v > 0 ? v : ''} />
                   </Bar>
@@ -749,20 +784,6 @@
                     <LabelList dataKey="Jumlah" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
                   </Line>
                 </LineChart>
-              </ResponsiveContainer>
-            </ChartCard>
-
-            <ChartCard title="Jumlah Doket vs Bulan" className="lg:col-span-2">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart3Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} />
-                  <YAxis stroke={colors.text} />
-                  <Tooltip />
-                  <Bar dataKey="Jumlah" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]}>
-                    <LabelList dataKey="Jumlah" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
-                  </Bar>
-                </BarChart>
               </ResponsiveContainer>
             </ChartCard>
           </div>
@@ -831,8 +852,8 @@
         siap: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Siap']) || 0), 0),
         takSiap: globalFiltered.reduce((acc, curr) => acc + (Number(curr['Tak Siap']) || 0), 0),
       };
-      metrics.peratus = metrics.jumlah > 0 ? ((metrics.siap / metrics.jumlah) * 100).toFixed(1) : 0;
-      const pTakSiap = metrics.jumlah > 0 ? ((metrics.takSiap / metrics.jumlah) * 100).toFixed(1) : 0;
+      metrics.peratus = metrics.jumlah > 0 ? ((metrics.siap / metrics.jumlah) * 100).toFixed(2) : "0.00";
+      const pTakSiap = metrics.jumlah > 0 ? ((metrics.takSiap / metrics.jumlah) * 100).toFixed(2) : "0.00";
 
       const chart1Data = useMemo(() => {
         const grouped = globalFiltered.reduce((acc, curr) => {
@@ -845,7 +866,6 @@
         return Object.values(grouped);
       }, [globalFiltered]);
 
-      // Betulkan urutan carta 2 menggunakan helper getBulanIndex
       const chart2Data = useMemo(() => {
         const grouped = globalFiltered.reduce((acc, curr) => {
           const b = curr.Bulan ? String(curr.Bulan).trim() : 'Tiada';
@@ -855,26 +875,27 @@
         return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] })).sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
       }, [globalFiltered]);
 
+      // Tukar tak siap readOnly, Jadikan Jumlah PPM boleh diedit
       const columns = [
         { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
         { key: 'Bulan', label: 'Bulan', type: 'text', readOnly: true },
         { key: 'Penyenggara', label: 'Penyenggara', type: 'text', readOnly: true },
-        { key: 'Tak Siap', label: 'Tak Siap', type: 'number' },
         { key: 'Siap', label: 'Siap', type: 'number' },
-        { key: 'Jumlah PPM', label: 'Jumlah PPM', type: 'number', readOnly: true },
+        { key: 'Jumlah PPM', label: 'Jumlah PPM', type: 'number' },
+        { key: 'Tak Siap', label: 'Tak Siap', type: 'number', readOnly: true },
         { 
           key: 'Peratus', label: '% Siap', readOnly: true, 
           render: (row) => {
             const peratus = row['Jumlah PPM'] > 0 ? ((row['Siap'] / row['Jumlah PPM']) * 100) : 0;
-            return <ProgressBar peratus={peratus} />;
+            return <ProgressBar peratus={peratus} decimals={2} />;
           }
         }
       ];
 
       const handleSaveEdit = (rowNumber, newRowData) => {
-        const ts = Number(newRowData['Tak Siap']) || 0;
+        const jp = Number(newRowData['Jumlah PPM']) || 0;
         const s = Number(newRowData['Siap']) || 0;
-        newRowData['Jumlah PPM'] = ts + s;
+        newRowData['Tak Siap'] = Math.max(0, jp - s); // Elak nilai negatif jika silap
         updater(GID, rowNumber, newRowData, setter, data);
       };
 
@@ -900,12 +921,12 @@
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard title="Prestasi Penyenggara (PPM)">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
+                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" position="center" angle={-90} stroke={colors.text} />
+                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={60} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Legend />
+                  <Legend verticalAlign="top" height={36} />
                   <Bar dataKey="Siap" stackId="a" fill={colors.success}>
                     <LabelList dataKey="Siap" position="center" angle={-90} fill="#fff" fontSize={11} formatter={(v)=> v > 0 ? v : ''} />
                   </Bar>
