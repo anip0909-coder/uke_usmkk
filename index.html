@@ -24,14 +24,14 @@
     tailwind.config = { darkMode: 'class' }
   </script>
 
-  <!-- Babel Compiler -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Babel Compiler (Gunakan versi yang stabil) -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
   <div id="root"></div>
 
-  <!-- Logik Aplikasi React (PENTING: Jangan gunakan 'import' di sini, guna destructuring dari window/React) -->
-  <script type="text/babel" data-presets="react,env">
+  <!-- Logik Aplikasi React (PENTING: Jangan gunakan data-presets="react,env" yang boleh menyebabkan ralat import) -->
+  <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
     const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts;
 
@@ -324,7 +324,7 @@
       const [editForm, setEditForm] = useState({});
 
       const startEdit = (row) => {
-        setEditingId(row._rowNumber);
+        setEditingId(row.id);
         setEditForm({ ...row });
       };
 
@@ -356,9 +356,9 @@
               </thead>
               <tbody>
                 {data.slice(0, 50).map((row) => {
-                  const isEditing = editingId === row._rowNumber;
+                  const isEditing = editingId === row.id;
                   return (
-                    <tr key={row._rowNumber} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <tr key={row.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       {columns.map(c => (
                         <td key={c.key} className="px-4 py-2">
                           {isEditing && !c.readOnly ? (
@@ -525,7 +525,7 @@
             <MetricCard title="Doket Tak Siap" value={mTakSiap} subtext={`${pTakSiap}%`} color="text-red-500" />
             <MetricCard title="Doket Batal" value={mBatal} subtext={`${pBatal}%`} color="text-gray-500" />
             <MetricCard title="Jumlah PPM" value={mJumlahPPM} color="text-purple-500" />
-            <MetricCard title="Jumlah RM (Kontraktor)" value={`RM ${(mJumlahRM).toLocaleString()}`} color="text-yellow-500" />
+            <MetricCard title="Jumlah RM (Kontraktor)" value={`RM ${mJumlahRM.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} color="text-yellow-500" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -545,9 +545,9 @@
 
             <ChartCard title={`Prestasi PPM (${filterTahun}) - Bulanan`}>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
+                <BarChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} />
+                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={60} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
                   <Bar dataKey="value" fill={colors.purple} name="Jumlah PPM" radius={[4, 4, 0, 0]}>
@@ -563,9 +563,9 @@
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
-                  <Tooltip />
+                  <Tooltip formatter={(v) => `RM ${Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                   <Line type="monotone" dataKey="value" stroke={colors.warning} strokeWidth={3} name="Nilai RM">
-                    <LabelList dataKey="value" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
+                    <LabelList dataKey="value" position="top" angle={-90} offset={25} fill={colors.text} fontSize={12} formatter={(v) => Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})} />
                   </Line>
                 </LineChart>
               </ResponsiveContainer>
@@ -576,7 +576,7 @@
                 <BarChart data={chart4Data} layout="vertical" margin={{ top: 20, right: 50, left: 50, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis type="number" domain={[0, 100]} stroke={colors.text} />
-                  <YAxis type="category" dataKey="name" stroke={colors.text} width={100} />
+                  <YAxis type="category" dataKey="name" stroke={colors.text} width={120} interval={0} tick={{ fontSize: 11 }} />
                   <Tooltip />
                   <Bar dataKey="peratus" fill={colors.success} name="% Siap" radius={[0, 4, 4, 0]}>
                     <LabelList dataKey="peratus" position="right" fill={colors.text} fontSize={12} formatter={(v) => `${v}%`} />
@@ -587,13 +587,13 @@
 
             <ChartCard title={`Ranking Kontraktor (Nilai RM)`} className="lg:col-span-2">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart5Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
+                <BarChart data={chart5Data} margin={{ top: 40, right: 20, left: 0, bottom: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} />
+                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={80} />
                   <YAxis stroke={colors.text} />
-                  <Tooltip />
+                  <Tooltip formatter={(v) => `RM ${Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                   <Bar dataKey="RM" fill={colors.warning} name="Jumlah RM" radius={[4, 4, 0, 0]}>
-                    <LabelList dataKey="RM" position="top" angle={-90} offset={25} fill={colors.text} fontSize={12} />
+                    <LabelList dataKey="RM" position="top" angle={-90} offset={35} fill={colors.text} fontSize={12} formatter={(v) => Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -939,9 +939,9 @@
 
             <ChartCard title="Trend Bulanan PPM">
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
+                <LineChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} />
+                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={60} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
                   <Line type="monotone" dataKey="Jumlah" stroke={colors.purple} strokeWidth={3}>
@@ -1053,7 +1053,10 @@
         { key: 'Kontraktor', label: 'Kontraktor', type: 'text', readOnly: true },
         { key: 'Zon', label: 'Zon', type: 'text', readOnly: true },
         { key: 'Jumlah Doket', label: 'Jumlah Doket', type: 'number' },
-        { key: 'Jumlah RM', label: 'Jumlah RM (RM)', type: 'number' }
+        { 
+          key: 'Jumlah RM', label: 'Jumlah RM (RM)', type: 'number',
+          render: (row) => row['Jumlah RM'] ? Number(row['Jumlah RM']).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'
+        }
       ];
 
       const handleSaveEdit = (rowNumber, newRowData) => updater(GID, rowNumber, newRowData, setter, data);
@@ -1072,16 +1075,16 @@
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <MetricCard title="Jumlah Doket" value={metrics.jumlahDoket} color="text-blue-500" />
-            <MetricCard title="Jumlah RM" value={`RM ${metrics.jumlahRM.toLocaleString()}`} color="text-yellow-500" />
+            <MetricCard title="Jumlah RM" value={`RM ${metrics.jumlahRM.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} color="text-yellow-500" />
             <MetricCard title="Bilangan Kontraktor" value={metrics.bilKontraktor} color="text-indigo-500" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard title="Doket Mengikut Kontraktor">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
+                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} />
+                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={80} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
                   <Bar dataKey="Jumlah" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]}>
@@ -1093,13 +1096,13 @@
 
             <ChartCard title="Nilai RM Mengikut Kontraktor">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
+                <BarChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} />
+                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={80} />
                   <YAxis stroke={colors.text} />
-                  <Tooltip />
+                  <Tooltip formatter={(v) => `RM ${Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                   <Bar dataKey="RM" fill={colors.warning} name="Jumlah RM" radius={[4, 4, 0, 0]}>
-                    <LabelList dataKey="RM" position="top" angle={-90} offset={25} fill={colors.text} fontSize={12} />
+                    <LabelList dataKey="RM" position="top" angle={-90} offset={35} fill={colors.text} fontSize={12} formatter={(v) => Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -1121,7 +1124,7 @@
                       <Cell key={`cell-${index}`} fill={[colors.primary, colors.warning, colors.success, colors.purple, colors.danger][index % 5]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => `RM ${value.toLocaleString()}`} />
+                  <Tooltip formatter={(value) => `RM ${Number(value).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
