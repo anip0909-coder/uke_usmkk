@@ -59,7 +59,7 @@
     // =========================================================================
     // SANGAT PENTING: TUKAR URL INI KEPADA URL WEB APP APPS SCRIPT ANDA
     // =========================================================================
-    const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbzam8tkFJ1PF1qC36-6om6fXV2h1r9O0r83IvUs4JtH8y8xPgBYoinIMZgpaXjZ3Gn1/exec";
+    const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbytiLV-DMFyvOVEjAXC0lnoMiuIy79-OkOlOCk_sEWuiO-mDWPZgd8EzAAxL54sPL4b/exec";
 
     const SenaraiBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
 
@@ -324,7 +324,7 @@
       const [editForm, setEditForm] = useState({});
 
       const startEdit = (row) => {
-        setEditingId(row.id);
+        setEditingId(row._rowNumber);
         setEditForm({ ...row });
       };
 
@@ -356,9 +356,9 @@
               </thead>
               <tbody>
                 {data.slice(0, 50).map((row) => {
-                  const isEditing = editingId === row.id;
+                  const isEditing = editingId === row._rowNumber;
                   return (
-                    <tr key={row.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <tr key={row._rowNumber} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       {columns.map(c => (
                         <td key={c.key} className="px-4 py-2">
                           {isEditing && !c.readOnly ? (
