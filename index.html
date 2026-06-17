@@ -1056,6 +1056,10 @@
         { 
           key: 'Jumlah RM', label: 'Jumlah RM (RM)', type: 'number',
           render: (row) => row['Jumlah RM'] ? Number(row['Jumlah RM']).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'
+        },
+        { 
+          key: 'Tanggungan Tahun Sebelum RM', label: 'Tanggungan Tahun Sblm (RM)', type: 'number',
+          render: (row) => row['Tanggungan Tahun Sebelum RM'] ? Number(row['Tanggungan Tahun Sebelum RM']).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'
         }
       ];
 
