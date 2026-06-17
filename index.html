@@ -324,7 +324,7 @@
       const [editForm, setEditForm] = useState({});
 
       const startEdit = (row) => {
-        setEditingId(row._rowNumber);
+        setEditingId(row.id);
         setEditForm({ ...row });
       };
 
@@ -356,9 +356,9 @@
               </thead>
               <tbody>
                 {data.slice(0, 50).map((row) => {
-                  const isEditing = editingId === row._rowNumber;
+                  const isEditing = editingId === row.id;
                   return (
-                    <tr key={row._rowNumber} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <tr key={row.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       {columns.map(c => (
                         <td key={c.key} className="px-4 py-2">
                           {isEditing && !c.readOnly ? (
