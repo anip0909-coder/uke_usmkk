@@ -51,7 +51,8 @@
         Check: <svg {...svgProps}><polyline points="20 6 9 17 4 12"/></svg>,
         X: <svg {...svgProps}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
         Menu: <svg {...svgProps}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
-        AlertCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        AlertCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+        PlusCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       };
       return icons[name] || null;
     };
@@ -63,7 +64,7 @@
 
     const SenaraiBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
 
-    // Pembantu global untuk memastikan turutan bulan yang mantap (termasuk shortnames jika perlu)
+    // Pembantu global untuk memastikan turutan bulan yang mantap
     const getBulanIndex = (b) => {
       if (!b) return 99;
       const str = String(b).trim().toLowerCase();
@@ -142,7 +143,6 @@
 
       // --- Logik Pengemaskinian Data ke Apps Script ---
       const updateSheetData = async (gid, rowNumber, newData, setter, localData) => {
-        // UI Optimistic Update
         const updated = localData.map(d => d._rowNumber === rowNumber ? { ...d, ...newData } : d);
         setter(updated);
 
@@ -174,6 +174,24 @@
         }
       };
 
+      const addSheetData = async (gid, newData, setter, localData) => {
+        // UI Optimistic Update (Beri ID rawak sementera sehingga laman di muat semula)
+        const tempRowNumber = Date.now(); 
+        const newRecord = { ...newData, id: `temp-${tempRowNumber}`, _rowNumber: tempRowNumber };
+        const updated = [...localData, newRecord];
+        setter(updated);
+
+        try {
+          await fetch(APPSCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'add', gid: gid, data: newData })
+          });
+        } catch (e) {
+          console.error("Ralat sync (add):", e);
+          alert("Gagal menambah data ke Google Sheet. Sila semak sambungan anda.");
+        }
+      };
+
       if (loading) {
         return (
           <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -188,7 +206,7 @@
           case 'main': return <MainDashboard dv3={dv3Data} ppm={ppmData} kon={kontraktorData} colors={colors} />;
           case 'dv3': return <DV3Dashboard data={dv3Data} updater={updateSheetData} deleter={deleteSheetData} setter={setDv3Data} colors={colors} />;
           case 'ppm': return <PPMDashboard data={ppmData} updater={updateSheetData} deleter={deleteSheetData} setter={setPpmData} colors={colors} />;
-          case 'kontraktor': return <KontraktorDashboard data={kontraktorData} updater={updateSheetData} deleter={deleteSheetData} setter={setKontraktorData} colors={colors} />;
+          case 'kontraktor': return <KontraktorDashboard data={kontraktorData} updater={updateSheetData} deleter={deleteSheetData} adder={addSheetData} setter={setKontraktorData} colors={colors} />;
           case 'tetapan': return <Tetapan settings={settings} setSettings={setSettings} />;
           default: return null;
         }
@@ -319,12 +337,12 @@
       );
     };
 
-    const EditableTable = ({ title, data, columns, onSave, onDelete }) => {
+    const EditableTable = ({ title, data, columns, onSave, onDelete, onAddClick }) => {
       const [editingId, setEditingId] = useState(null);
       const [editForm, setEditForm] = useState({});
 
       const startEdit = (row) => {
-        setEditingId(row.id);
+        setEditingId(row.id || row._rowNumber);
         setEditForm({ ...row });
       };
 
@@ -343,8 +361,17 @@
 
       return (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden mt-6">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{title} ({data.length} Rekod)</h3>
+            {onAddClick && (
+              <button 
+                onClick={onAddClick} 
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Icon name="PlusCircle" size={16} />
+                <span>Tambah Rekod</span>
+              </button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -356,9 +383,9 @@
               </thead>
               <tbody>
                 {data.slice(0, 50).map((row) => {
-                  const isEditing = editingId === row.id;
+                  const isEditing = editingId === (row.id || row._rowNumber);
                   return (
-                    <tr key={row.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <tr key={row.id || row._rowNumber} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       {columns.map(c => (
                         <td key={c.key} className="px-4 py-2">
                           {isEditing && !c.readOnly ? (
@@ -970,7 +997,7 @@
     // ==========================================
     // 4. KONTRAKTOR DASHBOARD TAB
     // ==========================================
-    const KontraktorDashboard = ({ data, updater, deleter, setter, colors }) => {
+    const KontraktorDashboard = ({ data, updater, deleter, adder, setter, colors }) => {
       const GID = 0;
       
       const [filterTahun, setFilterTahun] = useState('Semua');
@@ -982,6 +1009,18 @@
       const [tTahun, setTTahun] = useState('Semua');
       const [tBulan, setTBulan] = useState('Semua');
       const [tKon, setTKon] = useState('Semua');
+
+      // Mod Tambah Rekod Kontraktor
+      const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+      const [addForm, setAddForm] = useState({
+        Tahun: new Date().getFullYear(),
+        Bulan: 'Januari',
+        Kontraktor: '',
+        Zon: '',
+        'Jumlah Doket': 0,
+        'Jumlah RM': 0,
+        'Tanggungan Tahun Sebelum RM': 0
+      });
 
       const tahunOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)];
       const bulanOptions = ['Semua', ...SenaraiBulan];
@@ -1047,6 +1086,17 @@
         return Object.keys(grouped).map(k => ({ name: k, value: grouped[k] }));
       }, [globalFiltered]);
 
+      // CARTA BAHARU: Nilai RM Mengikut Bulan
+      const chart4Data = useMemo(() => {
+        const grouped = globalFiltered.reduce((acc, curr) => {
+          const b = curr.Bulan ? String(curr.Bulan).trim() : 'Tiada';
+          acc[b] = (acc[b] || 0) + (Number(curr['Jumlah RM']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, RM: grouped[k] }))
+          .sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
+      }, [globalFiltered]);
+
       const columns = [
         { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
         { key: 'Bulan', label: 'Bulan', type: 'text', readOnly: true },
@@ -1065,6 +1115,27 @@
 
       const handleSaveEdit = (rowNumber, newRowData) => updater(GID, rowNumber, newRowData, setter, data);
       const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
+      const handleAddSave = () => {
+         // Pastikan nilai adalah nombor
+         const formattedRow = {
+           ...addForm,
+           'Jumlah Doket': Number(addForm['Jumlah Doket']) || 0,
+           'Jumlah RM': Number(addForm['Jumlah RM']) || 0,
+           'Tanggungan Tahun Sebelum RM': Number(addForm['Tanggungan Tahun Sebelum RM']) || 0
+         };
+         adder(GID, formattedRow, setter, data);
+         setIsAddModalOpen(false);
+         // Reset form
+         setAddForm({
+          Tahun: new Date().getFullYear(),
+          Bulan: 'Januari',
+          Kontraktor: '',
+          Zon: '',
+          'Jumlah Doket': 0,
+          'Jumlah RM': 0,
+          'Tanggungan Tahun Sebelum RM': 0
+        });
+      };
 
       return (
         <div className="space-y-6 animate-fade-in">
@@ -1111,8 +1182,22 @@
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
+            
+            <ChartCard title="Nilai RM Mengikut Bulan">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chart4Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                  <XAxis dataKey="name" stroke={colors.text} />
+                  <YAxis stroke={colors.text} />
+                  <Tooltip formatter={(v) => `RM ${Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
+                  <Bar dataKey="RM" fill={colors.success} name="Jumlah RM" radius={[4, 4, 0, 0]}>
+                    <LabelList dataKey="RM" position="top" angle={-90} offset={35} fill={colors.text} fontSize={12} formatter={(v) => Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
 
-            <ChartCard title="% RM Mengikut Zon" className="lg:col-span-2">
+            <ChartCard title="% RM Mengikut Zon">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -1143,9 +1228,71 @@
               <FilterSelect label="Kontraktor" value={tKon} options={kontraktorOptions} onChange={setTKon} />
             </div>
             <div className="-mt-6">
-              <EditableTable title="Rekod Kontraktor (Pautan ke Google Sheet)" data={tableFiltered} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+              <EditableTable 
+                title="Rekod Kontraktor (Pautan ke Google Sheet)" 
+                data={tableFiltered} 
+                columns={columns} 
+                onSave={handleSaveEdit} 
+                onDelete={handleDelete} 
+                onAddClick={() => setIsAddModalOpen(true)}
+              />
             </div>
           </div>
+          
+          {/* Modal Tambah Kontraktor */}
+          {isAddModalOpen && (
+            <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-lg shadow-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Tambah Rekod Kontraktor</h3>
+                  <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={24}/></button>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Tahun</label>
+                      <input type="number" value={addForm.Tahun} onChange={(e) => setAddForm({...addForm, Tahun: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Bulan</label>
+                      <select value={addForm.Bulan} onChange={(e) => setAddForm({...addForm, Bulan: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500">
+                        {SenaraiBulan.map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Kontraktor</label>
+                      <input type="text" value={addForm.Kontraktor} onChange={(e) => setAddForm({...addForm, Kontraktor: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500" placeholder="Nama Kontraktor" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Zon</label>
+                      <input type="text" value={addForm.Zon} onChange={(e) => setAddForm({...addForm, Zon: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500" placeholder="Zon" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Jumlah Doket</label>
+                    <input type="number" value={addForm['Jumlah Doket']} onChange={(e) => setAddForm({...addForm, 'Jumlah Doket': e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Jumlah RM</label>
+                    <input type="number" step="0.01" value={addForm['Jumlah RM']} onChange={(e) => setAddForm({...addForm, 'Jumlah RM': e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 text-yellow-600 dark:text-yellow-400 font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Tanggungan Tahun Sebelum RM</label>
+                    <input type="number" step="0.01" value={addForm['Tanggungan Tahun Sebelum RM']} onChange={(e) => setAddForm({...addForm, 'Tanggungan Tahun Sebelum RM': e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 text-rose-500 dark:text-rose-400 font-bold" />
+                  </div>
+                </div>
+                <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
+                  <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded font-medium transition-colors">Batal</button>
+                  <button onClick={handleAddSave} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors flex items-center space-x-2">
+                    <Icon name="Check" size={18} />
+                    <span>Simpan Rekod Baru</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
