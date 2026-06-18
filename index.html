@@ -30,14 +30,14 @@
 <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
   <div id="root"></div>
 
-  <!-- Logik Aplikasi React (PENTING: Jangan gunakan data-presets="react,env" yang boleh menyebabkan ralat import) -->
+  <!-- Logik Aplikasi React -->
   <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
+    const { useState, useEffect, useMemo, useCallback } = React;
     const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts;
 
     // --- Pengganti ikon lucide-react ---
     const Icon = ({ name, size = 20, className = "" }) => {
-      const svgProps = { width: size, height: size, fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className };
+      const svgProps = { width: size, height: size, fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className, viewBox: "0 0 24 24" };
       const icons = {
         LayoutDashboard: <svg {...svgProps}><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>,
         Activity: <svg {...svgProps}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
@@ -52,7 +52,8 @@
         X: <svg {...svgProps}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
         Menu: <svg {...svgProps}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
         AlertCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
-        PlusCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        PlusCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
+        RefreshCw: <svg {...svgProps}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       };
       return icons[name] || null;
     };
@@ -60,7 +61,7 @@
     // =========================================================================
     // SANGAT PENTING: TUKAR URL INI KEPADA URL WEB APP APPS SCRIPT ANDA
     // =========================================================================
-    const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbytiLV-DMFyvOVEjAXC0lnoMiuIy79-OkOlOCk_sEWuiO-mDWPZgd8EzAAxL54sPL4b/exec";
+    const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxnJBAGz9F-U3RZMPUS8Au61cUjj3MMO_SSTpRjvNQ8IxlqoWl3e97z_TuS0_V49P3/exec";
 
     const SenaraiBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
 
@@ -93,34 +94,35 @@
       });
 
       // --- Fetch Data dari Google Apps Script API ---
-      useEffect(() => {
-        const fetchData = async () => {
-          if (!APPSCRIPT_URL || APPSCRIPT_URL.includes("MASUKKAN_URL")) {
-             setError("Sila masukkan URL Web App Apps Script pada pembolehubah APPSCRIPT_URL di dalam fail index.html");
-             setLoading(false);
-             return;
-          }
-          
-          setLoading(true);
-          try {
-            const res = await fetch(`${APPSCRIPT_URL}?action=getData`);
-            const result = await res.json();
+      const fetchData = useCallback(async () => {
+        if (!APPSCRIPT_URL || APPSCRIPT_URL.includes("MASUKKAN_URL")) {
+           setError("Sila masukkan URL Web App Apps Script pada pembolehubah APPSCRIPT_URL di dalam fail index.html");
+           setLoading(false);
+           return;
+        }
+        
+        setLoading(true);
+        try {
+          const res = await fetch(`${APPSCRIPT_URL}?action=getData`);
+          const result = await res.json();
 
-            if(result.error) throw new Error(result.error);
+          if(result.error) throw new Error(result.error);
 
-            setDv3Data(result.dv3 || []);
-            setPpmData(result.ppm || []);
-            setKontraktorData(result.kon || []);
-            setError(null);
-          } catch (err) {
-            console.error("Ralat mengambil data dari Apps Script:", err);
-            setError("Gagal memuat turun data. Sila pastikan Apps Script URL betul dan disiarkan sebagai 'Anyone'.");
-          } finally {
-            setLoading(false);
-          }
-        };
-        fetchData();
+          setDv3Data(result.dv3 || []);
+          setPpmData(result.ppm || []);
+          setKontraktorData(result.kon || []);
+          setError(null);
+        } catch (err) {
+          console.error("Ralat mengambil data dari Apps Script:", err);
+          setError("Gagal memuat turun data. Sila pastikan Apps Script URL betul dan disiarkan sebagai 'Anyone'.");
+        } finally {
+          setLoading(false);
+        }
       }, []);
+
+      useEffect(() => {
+        fetchData();
+      }, [fetchData]);
 
       useEffect(() => {
         if (darkMode) document.documentElement.classList.add('dark');
@@ -194,9 +196,9 @@
 
       if (loading) {
         return (
-          <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <span className="ml-3 text-lg">Memuatkan Data dari Google Sheets...</span>
+          <div className={`min-h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <span className="text-lg">Memuatkan Data dari Google Sheets...</span>
           </div>
         );
       }
@@ -204,8 +206,8 @@
       const renderTabContent = () => {
         switch (activeTab) {
           case 'main': return <MainDashboard dv3={dv3Data} ppm={ppmData} kon={kontraktorData} colors={colors} />;
-          case 'dv3': return <DV3Dashboard data={dv3Data} updater={updateSheetData} deleter={deleteSheetData} setter={setDv3Data} colors={colors} />;
-          case 'ppm': return <PPMDashboard data={ppmData} updater={updateSheetData} deleter={deleteSheetData} setter={setPpmData} colors={colors} />;
+          case 'dv3': return <DV3Dashboard data={dv3Data} updater={updateSheetData} deleter={deleteSheetData} adder={addSheetData} setter={setDv3Data} colors={colors} />;
+          case 'ppm': return <PPMDashboard data={ppmData} updater={updateSheetData} deleter={deleteSheetData} adder={addSheetData} setter={setPpmData} colors={colors} />;
           case 'kontraktor': return <KontraktorDashboard data={kontraktorData} updater={updateSheetData} deleter={deleteSheetData} adder={addSheetData} setter={setKontraktorData} colors={colors} />;
           case 'tetapan': return <Tetapan settings={settings} setSettings={setSettings} />;
           default: return null;
@@ -241,9 +243,20 @@
                   </button>
                 ))}
               </div>
+              
+              {/* Butang Refresh Global */}
+              <button 
+                onClick={fetchData}
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400"
+                title="Segarkan Data Terkini"
+              >
+                <Icon name="RefreshCw" size={20} />
+              </button>
+
               <button 
                 onClick={() => setDarkMode(!darkMode)}
                 className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title="Tukar Mod Paparan"
               >
                 <Icon name={darkMode ? 'Sun' : 'Moon'} size={20} />
               </button>
@@ -666,7 +679,7 @@
     // ==========================================
     // 2. DV3 DASHBOARD TAB
     // ==========================================
-    const DV3Dashboard = ({ data, updater, deleter, setter, colors }) => {
+    const DV3Dashboard = ({ data, updater, deleter, adder, setter, colors }) => {
       const GID = 2136024607;
       
       const [filterTahun, setFilterTahun] = useState('Semua');
@@ -677,6 +690,17 @@
       const [tTahun, setTTahun] = useState('Semua');
       const [tBulan, setTBulan] = useState('Semua');
       const [tPeny, setTPeny] = useState('Semua');
+
+      // Mod Tambah Rekod DV3
+      const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+      const [addForm, setAddForm] = useState({
+        Tahun: new Date().getFullYear(),
+        Bulan: 'Januari',
+        Penyenggara: '',
+        'Tak Siap': 0,
+        Siap: 0,
+        Batal: 0
+      });
 
       const tahunOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)];
       const bulanOptions = ['Semua', ...SenaraiBulan];
@@ -762,6 +786,19 @@
       };
 
       const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
+      
+      const handleAddSave = () => {
+         const formattedRow = {
+           ...addForm,
+           'Tak Siap': Number(addForm['Tak Siap']) || 0,
+           'Siap': Number(addForm['Siap']) || 0,
+           'Batal': Number(addForm['Batal']) || 0
+         };
+         formattedRow['Jumlah Doket'] = formattedRow['Tak Siap'] + formattedRow['Siap'] + formattedRow['Batal'];
+         adder(GID, formattedRow, setter, data);
+         setIsAddModalOpen(false);
+         setAddForm({ Tahun: new Date().getFullYear(), Bulan: 'Januari', Penyenggara: '', 'Tak Siap': 0, Siap: 0, Batal: 0 });
+      };
 
       return (
         <div className="space-y-6 animate-fade-in">
@@ -823,9 +860,68 @@
               <FilterSelect label="Penyenggara" value={tPeny} options={penyenggaraOptions} onChange={setTPeny} />
             </div>
             <div className="-mt-6">
-              <EditableTable title="Jadual Rekod DV3 (Pautan ke Google Sheet)" data={tableFiltered} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+              <EditableTable 
+                title="Jadual Rekod DV3 (Pautan ke Google Sheet)" 
+                data={tableFiltered} 
+                columns={columns} 
+                onSave={handleSaveEdit} 
+                onDelete={handleDelete}
+                onAddClick={() => setIsAddModalOpen(true)}
+              />
             </div>
           </div>
+          
+          {/* Modal Tambah DV3 */}
+          {isAddModalOpen && (
+            <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-lg shadow-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Tambah Rekod DV3</h3>
+                  <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={24}/></button>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Tahun</label>
+                      <input type="number" value={addForm.Tahun} onChange={(e) => setAddForm({...addForm, Tahun: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Bulan</label>
+                      <select value={addForm.Bulan} onChange={(e) => setAddForm({...addForm, Bulan: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500">
+                        {SenaraiBulan.map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Penyenggara</label>
+                    <input type="text" value={addForm.Penyenggara} onChange={(e) => setAddForm({...addForm, Penyenggara: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500" placeholder="Nama Penyenggara" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Tak Siap</label>
+                      <input type="number" value={addForm['Tak Siap']} onChange={(e) => setAddForm({...addForm, 'Tak Siap': e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 text-red-600 font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Siap</label>
+                      <input type="number" value={addForm.Siap} onChange={(e) => setAddForm({...addForm, Siap: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 text-green-600 font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Batal</label>
+                      <input type="number" value={addForm.Batal} onChange={(e) => setAddForm({...addForm, Batal: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 text-gray-500 font-bold" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 italic mt-2">* Jumlah Doket akan dikira secara automatik (Tak Siap + Siap + Batal).</p>
+                </div>
+                <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
+                  <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded font-medium transition-colors">Batal</button>
+                  <button onClick={handleAddSave} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors flex items-center space-x-2">
+                    <Icon name="Check" size={18} />
+                    <span>Simpan Rekod Baru</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
@@ -834,7 +930,7 @@
     // ==========================================
     // 3. PPM DASHBOARD TAB
     // ==========================================
-    const PPMDashboard = ({ data, updater, deleter, setter, colors }) => {
+    const PPMDashboard = ({ data, updater, deleter, adder, setter, colors }) => {
       const GID = 1093378707;
       
       const [filterTahun, setFilterTahun] = useState('Semua');
@@ -845,6 +941,16 @@
       const [tTahun, setTTahun] = useState('Semua');
       const [tBulan, setTBulan] = useState('Semua');
       const [tPeny, setTPeny] = useState('Semua');
+
+      // Mod Tambah Rekod PPM
+      const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+      const [addForm, setAddForm] = useState({
+        Tahun: new Date().getFullYear(),
+        Bulan: 'Januari',
+        Penyenggara: '',
+        'Jumlah PPM': 0,
+        Siap: 0
+      });
 
       const tahunOptions = ['Semua', ...Array.from(new Set(data.map(d=>d.Tahun))).filter(Boolean).sort((a,b)=>b-a)];
       const bulanOptions = ['Semua', ...SenaraiBulan];
@@ -927,6 +1033,20 @@
       };
 
       const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
+      
+      const handleAddSave = () => {
+         const jp = Number(addForm['Jumlah PPM']) || 0;
+         const s = Number(addForm['Siap']) || 0;
+         const formattedRow = {
+           ...addForm,
+           'Jumlah PPM': jp,
+           'Siap': s,
+           'Tak Siap': Math.max(0, jp - s)
+         };
+         adder(GID, formattedRow, setter, data);
+         setIsAddModalOpen(false);
+         setAddForm({ Tahun: new Date().getFullYear(), Bulan: 'Januari', Penyenggara: '', 'Jumlah PPM': 0, Siap: 0 });
+      };
 
       return (
         <div className="space-y-6 animate-fade-in">
@@ -987,9 +1107,64 @@
               <FilterSelect label="Penyenggara" value={tPeny} options={penyenggaraOptions} onChange={setTPeny} />
             </div>
             <div className="-mt-6">
-              <EditableTable title="Rekod PPM (Pautan ke Google Sheet)" data={tableFiltered} columns={columns} onSave={handleSaveEdit} onDelete={handleDelete} />
+              <EditableTable 
+                title="Rekod PPM (Pautan ke Google Sheet)" 
+                data={tableFiltered} 
+                columns={columns} 
+                onSave={handleSaveEdit} 
+                onDelete={handleDelete}
+                onAddClick={() => setIsAddModalOpen(true)}
+              />
             </div>
           </div>
+          
+          {/* Modal Tambah PPM */}
+          {isAddModalOpen && (
+            <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-lg shadow-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Tambah Rekod PPM</h3>
+                  <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={24}/></button>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Tahun</label>
+                      <input type="number" value={addForm.Tahun} onChange={(e) => setAddForm({...addForm, Tahun: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Bulan</label>
+                      <select value={addForm.Bulan} onChange={(e) => setAddForm({...addForm, Bulan: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500">
+                        {SenaraiBulan.map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Penyenggara</label>
+                    <input type="text" value={addForm.Penyenggara} onChange={(e) => setAddForm({...addForm, Penyenggara: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500" placeholder="Nama Penyenggara" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Jumlah PPM</label>
+                      <input type="number" value={addForm['Jumlah PPM']} onChange={(e) => setAddForm({...addForm, 'Jumlah PPM': e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 text-purple-600 font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Siap</label>
+                      <input type="number" value={addForm.Siap} onChange={(e) => setAddForm({...addForm, Siap: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 text-green-600 font-bold" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 italic mt-2">* Tak Siap akan dikira secara automatik (Jumlah PPM - Siap).</p>
+                </div>
+                <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
+                  <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded font-medium transition-colors">Batal</button>
+                  <button onClick={handleAddSave} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors flex items-center space-x-2">
+                    <Icon name="Check" size={18} />
+                    <span>Simpan Rekod Baru</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
