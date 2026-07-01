@@ -122,7 +122,11 @@
         setError(null);
         
         try {
-          const res = await fetch(`${APPSCRIPT_URL}?action=getData`);
+          const res = await fetch(`${APPSCRIPT_URL}?action=getData`, {
+            method: 'GET',
+            mode: 'cors',
+            redirect: 'follow'
+          });
           
           if (!res.ok) {
             throw new Error(`Ralat HTTP: ${res.status}`);
@@ -184,13 +188,24 @@
         setter(updated);
 
         try {
-          await fetch(APPSCRIPT_URL, {
+          const response = await fetch(APPSCRIPT_URL, {
             method: 'POST',
+            mode: 'cors',
+            redirect: 'follow',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8'
+            },
             body: JSON.stringify({ action: 'update', gid: gid, rowNumber: rowNumber, data: newData })
           });
+          const result = await response.json();
+          if (result && result.success) {
+            alert("Rekod berjaya dikemaskini di Google Sheet!");
+          } else {
+            throw new Error(result ? result.error : "Gagal mengemaskini rekod.");
+          }
         } catch (e) {
           console.error("Ralat sync:", e);
-          alert("Mod Luar Talian / Demo: Perubahan hanya disimpan sementara pada pelayar ini.");
+          alert("Mod Luar Talian / Ralat Rangkaian: Perubahan hanya disimpan sementara pada pelayar ini.");
         }
       };
 
@@ -200,32 +215,59 @@
           setter(updated);
 
           try {
-            await fetch(APPSCRIPT_URL, {
+            const response = await fetch(APPSCRIPT_URL, {
               method: 'POST',
+              mode: 'cors',
+              redirect: 'follow',
+              headers: {
+                'Content-Type': 'text/plain;charset=utf-8'
+              },
               body: JSON.stringify({ action: 'delete', gid: gid, rowNumber: rowNumber })
             });
+            const result = await response.json();
+            if (result && result.success) {
+              alert("Rekod berjaya dipadam dari Google Sheet!");
+            } else {
+              throw new Error(result ? result.error : "Gagal memadam rekod.");
+            }
           } catch (e) {
             console.error("Ralat padam:", e);
-            alert("Mod Luar Talian / Demo: Perubahan hanya disimpan sementara pada pelayar ini.");
+            alert("Mod Luar Talian / Ralat Rangkaian: Perubahan hanya disimpan sementara pada pelayar ini.");
           }
         }
       };
 
       const addSheetData = async (gid, newData, setter, localData) => {
-        // UI Optimistic Update (Beri ID rawak sementara sehingga laman dimuat semula)
-        const tempRowNumber = Date.now(); 
-        const newRecord = { ...newData, id: `temp-${tempRowNumber}`, _rowNumber: tempRowNumber };
-        const updated = [...localData, newRecord];
-        setter(updated);
+        setLoading(true);
 
         try {
-          await fetch(APPSCRIPT_URL, {
+          const response = await fetch(APPSCRIPT_URL, {
             method: 'POST',
+            mode: 'cors',
+            redirect: 'follow',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8'
+            },
             body: JSON.stringify({ action: 'add', gid: gid, data: newData })
           });
+          
+          const result = await response.json();
+          if (result && result.success) {
+            alert("Rekod baharu berjaya disimpan ke Google Sheet!");
+            // Refresh keseluruhan data dari pangkalan data untuk dapatkan `_rowNumber` yang tepat
+            await fetchData();
+          } else {
+            throw new Error(result ? result.error : "Gagal menambah rekod.");
+          }
         } catch (e) {
           console.error("Ralat sync (add):", e);
-          alert("Mod Luar Talian / Demo: Perubahan hanya disimpan sementara pada pelayar ini.");
+          alert("Gagal memuat naik data ke pelayan. Data disimpan sementara dalam mod luar talian.");
+          // UI Optimistic Update
+          const tempRowNumber = Date.now(); 
+          const newRecord = { ...newData, id: `temp-${tempRowNumber}`, _rowNumber: tempRowNumber };
+          const updated = [...localData, newRecord];
+          setter(updated);
+          setLoading(false);
         }
       };
 
