@@ -30,7 +30,7 @@
 <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
   <div id="root"></div>
 
-  <!-- Logik Aplikasi React -->
+  <!-- Logik Aplikasi React (PENTING: Jangan gunakan data-presets="react,env" yang boleh menyebabkan ralat import) -->
   <script type="text/babel">
     const { useState, useEffect, useMemo, useCallback } = React;
     const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts;
@@ -75,6 +75,22 @@
       return shortIdx !== -1 ? shortIdx : 99;
     };
 
+    // Data Simulasi/Mock Jika Apps Script Gagal (CORS/URL Salah)
+    const mockData = {
+      dv3: [
+        { _rowNumber: 2, id: 'm1', Tahun: 2024, Bulan: 'Januari', Penyenggara: 'Ali', 'Jumlah Doket': 10, Siap: 8, 'Tak Siap': 2, Batal: 0 },
+        { _rowNumber: 3, id: 'm2', Tahun: 2024, Bulan: 'Februari', Penyenggara: 'Muthu', 'Jumlah Doket': 15, Siap: 12, 'Tak Siap': 2, Batal: 1 },
+      ],
+      ppm: [
+        { _rowNumber: 2, id: 'm3', Tahun: 2024, Bulan: 'Januari', Penyenggara: 'Chong', 'Jumlah PPM': 5, Siap: 5, 'Tak Siap': 0 },
+        { _rowNumber: 3, id: 'm4', Tahun: 2024, Bulan: 'Februari', Penyenggara: 'Muthu', 'Jumlah PPM': 8, Siap: 6, 'Tak Siap': 2 },
+      ],
+      kon: [
+        { _rowNumber: 2, id: 'm5', Tahun: 2024, Bulan: 'Januari', Kontraktor: 'Syarikat Maju', Zon: 'Zon A', 'Jumlah Doket': 20, 'Jumlah RM': 15000, 'Tanggungan Tahun Sebelum RM': 2000 },
+        { _rowNumber: 3, id: 'm6', Tahun: 2024, Bulan: 'Februari', Kontraktor: 'Bina Jaya', Zon: 'Zon B', 'Jumlah Doket': 35, 'Jumlah RM': 28500, 'Tanggungan Tahun Sebelum RM': 0 },
+      ]
+    };
+
     function App() {
       const [darkMode, setDarkMode] = useState(false);
       const [activeTab, setActiveTab] = useState('main');
@@ -97,24 +113,43 @@
       const fetchData = useCallback(async () => {
         if (!APPSCRIPT_URL || APPSCRIPT_URL.includes("MASUKKAN_URL")) {
            setError("Sila masukkan URL Web App Apps Script pada pembolehubah APPSCRIPT_URL di dalam fail index.html");
+           setDv3Data(mockData.dv3); setPpmData(mockData.ppm); setKontraktorData(mockData.kon);
            setLoading(false);
            return;
         }
         
         setLoading(true);
+        setError(null);
+        
         try {
           const res = await fetch(`${APPSCRIPT_URL}?action=getData`);
-          const result = await res.json();
+          
+          if (!res.ok) {
+            throw new Error(`Ralat HTTP: ${res.status}`);
+          }
+          
+          const textResponse = await res.text();
+          let result;
+          try {
+            result = JSON.parse(textResponse);
+          } catch (e) {
+            throw new Error("Respon dari pelayan bukan format JSON yang sah. Pastikan Apps Script URL disiarkan (deploy) dengan akses 'Anyone'.");
+          }
 
           if(result.error) throw new Error(result.error);
 
           setDv3Data(result.dv3 || []);
           setPpmData(result.ppm || []);
           setKontraktorData(result.kon || []);
-          setError(null);
+          
         } catch (err) {
           console.error("Ralat mengambil data dari Apps Script:", err);
-          setError("Gagal memuat turun data. Sila pastikan Apps Script URL betul dan disiarkan sebagai 'Anyone'.");
+          setError("Gagal menyambung ke pangkalan data Google Sheets. Memaparkan data demo (Mock Data) untuk sementara waktu. Sila pastikan Web App Google Apps Script anda di-'deploy' dengan tetapan: Execute as: 'Me', dan Who has access: 'Anyone'.");
+          
+          // Fallback ke data Mock agar aplikasi tidak pecah
+          setDv3Data(mockData.dv3);
+          setPpmData(mockData.ppm);
+          setKontraktorData(mockData.kon);
         } finally {
           setLoading(false);
         }
@@ -155,7 +190,7 @@
           });
         } catch (e) {
           console.error("Ralat sync:", e);
-          alert("Gagal menyegerakkan data ke Google Sheet. Sila semak sambungan anda.");
+          alert("Mod Luar Talian / Demo: Perubahan hanya disimpan sementara pada pelayar ini.");
         }
       };
 
@@ -171,13 +206,13 @@
             });
           } catch (e) {
             console.error("Ralat padam:", e);
-            alert("Gagal memadam data dari Google Sheet.");
+            alert("Mod Luar Talian / Demo: Perubahan hanya disimpan sementara pada pelayar ini.");
           }
         }
       };
 
       const addSheetData = async (gid, newData, setter, localData) => {
-        // UI Optimistic Update (Beri ID rawak sementera sehingga laman di muat semula)
+        // UI Optimistic Update (Beri ID rawak sementara sehingga laman dimuat semula)
         const tempRowNumber = Date.now(); 
         const newRecord = { ...newData, id: `temp-${tempRowNumber}`, _rowNumber: tempRowNumber };
         const updated = [...localData, newRecord];
@@ -190,7 +225,7 @@
           });
         } catch (e) {
           console.error("Ralat sync (add):", e);
-          alert("Gagal menambah data ke Google Sheet. Sila semak sambungan anda.");
+          alert("Mod Luar Talian / Demo: Perubahan hanya disimpan sementara pada pelayar ini.");
         }
       };
 
@@ -285,14 +320,17 @@
           )}
 
           <div className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-            {error ? (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center">
-                <Icon name="AlertCircle" className="mr-2" />
-                <p>{error}</p>
+            {error && (
+              <div className="bg-amber-100 border border-amber-400 text-amber-800 px-6 py-5 rounded-lg flex items-start shadow-sm mb-6">
+                <Icon name="AlertCircle" className="mr-3 mt-1 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg mb-1">Amaran Sambungan Rangkaian</h3>
+                  <p>{error}</p>
+                </div>
               </div>
-            ) : (
-              renderTabContent()
             )}
+            
+            {renderTabContent()}
           </div>
         </div>
       );
@@ -492,13 +530,16 @@
       }, [dv3]);
 
       const chart2Data = useMemo(() => {
-        const grouped = fPpm.reduce((acc, curr) => {
-          const month = curr.Bulan || 'Lain';
-          acc[month] = (acc[month] || 0) + (Number(curr['Jumlah PPM']) || 0);
-          return acc;
-        }, {});
-        return Object.keys(grouped).map(k => ({ name: k, value: grouped[k] }))
-          .sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
+        let siap = 0;
+        let takSiap = 0;
+        fPpm.forEach(curr => {
+          siap += (Number(curr['Siap']) || 0);
+          takSiap += (Number(curr['Tak Siap']) || 0);
+        });
+        return [
+          { name: 'Siap', value: siap },
+          { name: 'Tak Siap', value: takSiap }
+        ];
       }, [fPpm]);
 
       const chart3Data = useMemo(() => {
@@ -583,17 +624,25 @@
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title={`Prestasi PPM (${filterTahun}) - Bulanan`}>
+            <ChartCard title={`Prestasi PPM Keseluruhan (${filterTahun})`}>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={60} />
-                  <YAxis stroke={colors.text} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill={colors.purple} name="Jumlah PPM" radius={[4, 4, 0, 0]}>
-                    <LabelList dataKey="value" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
-                  </Bar>
-                </BarChart>
+                <PieChart>
+                  <Pie
+                    data={chart2Data}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                    outerRadius={100}
+                    dataKey="value"
+                  >
+                    {chart2Data.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.name === 'Siap' ? colors.success : colors.danger} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `${value} PPM`} />
+                  <Legend />
+                </PieChart>
               </ResponsiveContainer>
             </ChartCard>
 
@@ -680,7 +729,7 @@
     // 2. DV3 DASHBOARD TAB
     // ==========================================
     const DV3Dashboard = ({ data, updater, deleter, adder, setter, colors }) => {
-      const GID = 2136024607;
+      const GID = 2136024607; // GID bagi helaian DV3
       
       const [filterTahun, setFilterTahun] = useState('Semua');
       const [filterBulanMula, setFilterBulanMula] = useState('Semua');
@@ -795,7 +844,10 @@
            'Batal': Number(addForm['Batal']) || 0
          };
          formattedRow['Jumlah Doket'] = formattedRow['Tak Siap'] + formattedRow['Siap'] + formattedRow['Batal'];
+         
+         // Pastikan kita pass GID yang spesifik untuk tab DV3
          adder(GID, formattedRow, setter, data);
+         
          setIsAddModalOpen(false);
          setAddForm({ Tahun: new Date().getFullYear(), Bulan: 'Januari', Penyenggara: '', 'Tak Siap': 0, Siap: 0, Batal: 0 });
       };
@@ -931,7 +983,7 @@
     // 3. PPM DASHBOARD TAB
     // ==========================================
     const PPMDashboard = ({ data, updater, deleter, adder, setter, colors }) => {
-      const GID = 1093378707;
+      const GID = 1093378707; // GID bagi helaian PPM
       
       const [filterTahun, setFilterTahun] = useState('Semua');
       const [filterBulanMula, setFilterBulanMula] = useState('Semua');
@@ -1043,7 +1095,10 @@
            'Siap': s,
            'Tak Siap': Math.max(0, jp - s)
          };
+         
+         // Pastikan kita pass GID yang spesifik untuk tab PPM
          adder(GID, formattedRow, setter, data);
+         
          setIsAddModalOpen(false);
          setAddForm({ Tahun: new Date().getFullYear(), Bulan: 'Januari', Penyenggara: '', 'Jumlah PPM': 0, Siap: 0 });
       };
@@ -1173,7 +1228,7 @@
     // 4. KONTRAKTOR DASHBOARD TAB
     // ==========================================
     const KontraktorDashboard = ({ data, updater, deleter, adder, setter, colors }) => {
-      const GID = 0;
+      const GID = 0; // GID bagi helaian Kontraktor
       
       const [filterTahun, setFilterTahun] = useState('Semua');
       const [filterBulanMula, setFilterBulanMula] = useState('Semua');
@@ -1291,14 +1346,16 @@
       const handleSaveEdit = (rowNumber, newRowData) => updater(GID, rowNumber, newRowData, setter, data);
       const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
       const handleAddSave = () => {
-         // Pastikan nilai adalah nombor
          const formattedRow = {
            ...addForm,
            'Jumlah Doket': Number(addForm['Jumlah Doket']) || 0,
            'Jumlah RM': Number(addForm['Jumlah RM']) || 0,
            'Tanggungan Tahun Sebelum RM': Number(addForm['Tanggungan Tahun Sebelum RM']) || 0
          };
+         
+         // Pastikan kita pass GID yang spesifik untuk tab Kontraktor
          adder(GID, formattedRow, setter, data);
+         
          setIsAddModalOpen(false);
          // Reset form
          setAddForm({
@@ -1362,7 +1419,7 @@
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chart4Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={80} />
+                  <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip formatter={(v) => `RM ${Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                   <Bar dataKey="RM" fill={colors.success} name="Jumlah RM" radius={[4, 4, 0, 0]}>
