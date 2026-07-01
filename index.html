@@ -30,7 +30,7 @@
 <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
   <div id="root"></div>
 
-  <!-- Logik Aplikasi React (PENTING: Jangan gunakan data-presets="react,env" yang boleh menyebabkan ralat import) -->
+  <!-- Logik Aplikasi React -->
   <script type="text/babel">
     const { useState, useEffect, useMemo, useCallback } = React;
     const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts;
@@ -65,7 +65,6 @@
 
     const SenaraiBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
 
-    // Pembantu global untuk memastikan turutan bulan yang mantap
     const getBulanIndex = (b) => {
       if (!b) return 99;
       const str = String(b).trim().toLowerCase();
@@ -122,11 +121,8 @@
         setError(null);
         
         try {
-          const res = await fetch(`${APPSCRIPT_URL}?action=getData`, {
-            method: 'GET',
-            mode: 'cors',
-            redirect: 'follow'
-          });
+          // Buang mod CORS yang terlalu strict untuk elak preflight issue pada sesetengah browser
+          const res = await fetch(`${APPSCRIPT_URL}?action=getData`);
           
           if (!res.ok) {
             throw new Error(`Ralat HTTP: ${res.status}`);
@@ -137,7 +133,7 @@
           try {
             result = JSON.parse(textResponse);
           } catch (e) {
-            throw new Error("Respon dari pelayan bukan format JSON yang sah. Pastikan Apps Script URL disiarkan (deploy) dengan akses 'Anyone'.");
+            throw new Error("Respon dari pelayan bukan format JSON yang sah.");
           }
 
           if(result.error) throw new Error(result.error);
@@ -148,9 +144,8 @@
           
         } catch (err) {
           console.error("Ralat mengambil data dari Apps Script:", err);
-          setError("Gagal menyambung ke pangkalan data Google Sheets. Memaparkan data demo (Mock Data) untuk sementara waktu. Sila pastikan Web App Google Apps Script anda di-'deploy' dengan tetapan: Execute as: 'Me', dan Who has access: 'Anyone'.");
+          setError("Gagal menyambung ke pangkalan data Google Sheets. Memaparkan data demo (Mock Data) untuk sementara waktu. Sila semak sambungan rangkaian atau pastikan URL Apps Script tepat.");
           
-          // Fallback ke data Mock agar aplikasi tidak pecah
           setDv3Data(mockData.dv3);
           setPpmData(mockData.ppm);
           setKontraktorData(mockData.kon);
@@ -190,22 +185,18 @@
         try {
           const response = await fetch(APPSCRIPT_URL, {
             method: 'POST',
-            mode: 'cors',
-            redirect: 'follow',
-            headers: {
-              'Content-Type': 'text/plain;charset=utf-8'
-            },
             body: JSON.stringify({ action: 'update', gid: gid, rowNumber: rowNumber, data: newData })
           });
-          const result = await response.json();
+          const textRes = await response.text();
+          const result = JSON.parse(textRes);
           if (result && result.success) {
             alert("Rekod berjaya dikemaskini di Google Sheet!");
           } else {
-            throw new Error(result ? result.error : "Gagal mengemaskini rekod.");
+            throw new Error("Gagal");
           }
         } catch (e) {
           console.error("Ralat sync:", e);
-          alert("Mod Luar Talian / Ralat Rangkaian: Perubahan hanya disimpan sementara pada pelayar ini.");
+          alert("Gagal menghubungi pangkalan data Google Sheet. Data disimpan dalam mod luar talian (sementara).");
         }
       };
 
@@ -217,22 +208,18 @@
           try {
             const response = await fetch(APPSCRIPT_URL, {
               method: 'POST',
-              mode: 'cors',
-              redirect: 'follow',
-              headers: {
-                'Content-Type': 'text/plain;charset=utf-8'
-              },
               body: JSON.stringify({ action: 'delete', gid: gid, rowNumber: rowNumber })
             });
-            const result = await response.json();
+            const textRes = await response.text();
+            const result = JSON.parse(textRes);
             if (result && result.success) {
               alert("Rekod berjaya dipadam dari Google Sheet!");
             } else {
-              throw new Error(result ? result.error : "Gagal memadam rekod.");
+               throw new Error("Gagal");
             }
           } catch (e) {
             console.error("Ralat padam:", e);
-            alert("Mod Luar Talian / Ralat Rangkaian: Perubahan hanya disimpan sementara pada pelayar ini.");
+            alert("Gagal menghubungi pangkalan data Google Sheet. Data dipadam dalam mod luar talian (sementara).");
           }
         }
       };
@@ -243,30 +230,25 @@
         try {
           const response = await fetch(APPSCRIPT_URL, {
             method: 'POST',
-            mode: 'cors',
-            redirect: 'follow',
-            headers: {
-              'Content-Type': 'text/plain;charset=utf-8'
-            },
             body: JSON.stringify({ action: 'add', gid: gid, data: newData })
           });
           
-          const result = await response.json();
+          const textRes = await response.text();
+          const result = JSON.parse(textRes);
+          
           if (result && result.success) {
             alert("Rekod baharu berjaya disimpan ke Google Sheet!");
-            // Refresh keseluruhan data dari pangkalan data untuk dapatkan `_rowNumber` yang tepat
-            await fetchData();
+            await fetchData(); // Muat semula untuk dapatkan _rowNumber rasmi
           } else {
-            throw new Error(result ? result.error : "Gagal menambah rekod.");
+            throw new Error("Respon tidak berjaya");
           }
         } catch (e) {
           console.error("Ralat sync (add):", e);
-          alert("Gagal memuat naik data ke pelayan. Data disimpan sementara dalam mod luar talian.");
-          // UI Optimistic Update
+          alert("Gagal menambah data ke Google Sheet. Ralat Rangkaian/CORS. Data disimpan sementara.");
+          // UI Optimistic Update (Beri ID rawak sementera)
           const tempRowNumber = Date.now(); 
           const newRecord = { ...newData, id: `temp-${tempRowNumber}`, _rowNumber: tempRowNumber };
-          const updated = [...localData, newRecord];
-          setter(updated);
+          setter([...localData, newRecord]);
           setLoading(false);
         }
       };
@@ -321,7 +303,6 @@
                 ))}
               </div>
               
-              {/* Butang Refresh Global */}
               <button 
                 onClick={fetchData}
                 className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400"
@@ -366,7 +347,7 @@
               <div className="bg-amber-100 border border-amber-400 text-amber-800 px-6 py-5 rounded-lg flex items-start shadow-sm mb-6">
                 <Icon name="AlertCircle" className="mr-3 mt-1 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="font-bold text-lg mb-1">Amaran Sambungan Rangkaian</h3>
+                  <h3 className="font-bold text-lg mb-1">Status Rangkaian</h3>
                   <p>{error}</p>
                 </div>
               </div>
