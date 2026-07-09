@@ -65,6 +65,7 @@
 
     const SenaraiBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
 
+    // Pembantu global untuk memastikan turutan bulan yang mantap
     const getBulanIndex = (b) => {
       if (!b) return 99;
       const str = String(b).trim().toLowerCase();
@@ -74,6 +75,7 @@
       return shortIdx !== -1 ? shortIdx : 99;
     };
 
+    // Data Simulasi/Mock Jika Apps Script Gagal
     const mockData = {
       dv3: [
         { _rowNumber: 2, id: 'm1', Tahun: 2024, Bulan: 'Januari', Penyenggara: 'Ali', 'Jumlah Doket': 10, Siap: 8, 'Tak Siap': 2, Batal: 0 },
@@ -107,6 +109,7 @@
         tabKontraktor: "Kontraktor"
       });
 
+      // --- Fetch Data dari Google Apps Script API ---
       const fetchData = useCallback(async () => {
         if (!APPSCRIPT_URL || APPSCRIPT_URL.includes("MASUKKAN_URL")) {
            setError("Sila masukkan URL Web App Apps Script pada pembolehubah APPSCRIPT_URL di dalam fail index.html");
@@ -169,6 +172,7 @@
         { id: 'tetapan', label: 'Tetapan', icon: 'Settings' },
       ];
 
+      // --- Logik Pengemaskinian Data ke Apps Script ---
       const updateSheetData = async (gid, rowNumber, newData, setter, localData) => {
         const updated = localData.map(d => d._rowNumber === rowNumber ? { ...d, ...newData } : d);
         setter(updated);
@@ -319,7 +323,7 @@
               <div className="bg-amber-100 border border-amber-400 text-amber-800 px-6 py-5 rounded-lg flex items-start shadow-sm mb-6">
                 <Icon name="AlertCircle" className="mr-3 mt-1 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="font-bold text-lg mb-1">Status Rangkaian</h3>
+                  <h3 className="font-bold text-lg mb-1">Amaran Sambungan Rangkaian</h3>
                   <p>{error}</p>
                 </div>
               </div>
@@ -380,12 +384,18 @@
 
       const startEdit = (row) => {
         setEditingId(row.id || row._rowNumber);
-        setEditForm({ ...row });
+        const initialForm = { ...row };
+        // Setkan nilai permulaan 0 untuk nombor supaya pengguna taip tambahan (delta)
+        columns.forEach(c => {
+          if (c.type === 'number' && !c.readOnly) {
+            initialForm[c.key] = 0; 
+          }
+        });
+        setEditForm(initialForm);
       };
 
       const handleInputChange = (e, key, type) => {
         let val = e.target.value;
-        if (type === 'number') val = val ? Number(val) : 0;
         setEditForm({ ...editForm, [key]: val });
       };
 
@@ -420,8 +430,20 @@
                       {columns.map(c => (
                         <td key={c.key} className="px-4 py-2">
                           {isEditing && !c.readOnly ? (
-                            <input type={c.type || "text"} value={editForm[c.key]} onChange={(e) => handleInputChange(e, c.key, c.type)} className="w-full px-2 py-1 border rounded dark:bg-gray-900 dark:border-gray-600 outline-none focus:ring-1 focus:ring-blue-500" />
-                          ) : ( c.render ? c.render(row) : row[c.key] )}
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 mb-1 leading-tight">Semasa: {row[c.key]}</span>
+                              <input 
+                                type={c.type === 'number' ? 'number' : 'text'}
+                                step={c.key.includes('RM') ? "0.01" : "1"}
+                                value={editForm[c.key] === 0 && c.type === 'number' ? '' : editForm[c.key]}
+                                placeholder={c.type === 'number' ? "+/- Nilai" : ""}
+                                onChange={(e) => handleInputChange(e, c.key, c.type)}
+                                className="w-full px-2 py-1 border rounded dark:bg-gray-900 dark:border-gray-600 outline-none focus:ring-1 focus:ring-blue-500" 
+                              />
+                            </div>
+                          ) : ( 
+                            c.render ? c.render(row) : row[c.key] 
+                          )}
                         </td>
                       ))}
                       <td className="px-4 py-2 flex justify-center space-x-2">
@@ -432,7 +454,7 @@
                           </>
                         ) : (
                           <>
-                            <button onClick={() => startEdit(row)} className="text-blue-600 hover:text-blue-800 p-1 bg-blue-100 rounded-full dark:bg-blue-900/30 dark:text-blue-400" title="Sunting"><Icon name="Edit2" size={16}/></button>
+                            <button onClick={() => startEdit(row)} className="text-blue-600 hover:text-blue-800 p-1 bg-blue-100 rounded-full dark:bg-blue-900/30 dark:text-blue-400" title="Kemaskini Tambahan"><Icon name="Edit2" size={16}/></button>
                             <button onClick={() => onDelete(row._rowNumber)} className="text-red-600 hover:text-red-800 p-1 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400" title="Padam"><Icon name="Trash2" size={16}/></button>
                           </>
                         )}
@@ -739,12 +761,23 @@
         }
       ];
 
-      const handleSaveEdit = (rowNumber, newRowData) => {
-        const ts = Number(newRowData['Tak Siap']) || 0;
-        const s = Number(newRowData['Siap']) || 0;
-        const b = Number(newRowData['Batal']) || 0;
-        newRowData['Jumlah Doket'] = ts + s + b;
-        updater(GID, rowNumber, newRowData, setter, data);
+      // KEMAS KINI MENGGUNAKAN KONSEP PENAMBAHAN DELTA PADA EXISTING RECORD
+      const handleSaveEdit = (rowNumber, deltaData) => {
+        const existingRecord = data.find(d => d._rowNumber === rowNumber);
+        if(!existingRecord) return;
+        
+        const ts = (Number(existingRecord['Tak Siap']) || 0) + (Number(deltaData['Tak Siap']) || 0);
+        const s = (Number(existingRecord['Siap']) || 0) + (Number(deltaData['Siap']) || 0);
+        const b = (Number(existingRecord['Batal']) || 0) + (Number(deltaData['Batal']) || 0);
+        
+        const updatedRow = {
+          ...existingRecord,
+          'Tak Siap': ts,
+          'Siap': s,
+          'Batal': b,
+          'Jumlah Doket': ts + s + b
+        };
+        updater(GID, rowNumber, updatedRow, setter, data);
       };
 
       const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
@@ -1004,11 +1037,21 @@
         }
       ];
 
-      const handleSaveEdit = (rowNumber, newRowData) => {
-        const jp = Number(newRowData['Jumlah PPM']) || 0;
-        const s = Number(newRowData['Siap']) || 0;
-        newRowData['Tak Siap'] = Math.max(0, jp - s); 
-        updater(GID, rowNumber, newRowData, setter, data);
+      // KEMAS KINI MENGGUNAKAN KONSEP PENAMBAHAN DELTA PADA EXISTING RECORD
+      const handleSaveEdit = (rowNumber, deltaData) => {
+        const existingRecord = data.find(d => d._rowNumber === rowNumber);
+        if(!existingRecord) return;
+
+        const jp = (Number(existingRecord['Jumlah PPM']) || 0) + (Number(deltaData['Jumlah PPM']) || 0);
+        const s = (Number(existingRecord['Siap']) || 0) + (Number(deltaData['Siap']) || 0);
+        
+        const updatedRow = {
+          ...existingRecord,
+          'Jumlah PPM': jp,
+          'Siap': s,
+          'Tak Siap': Math.max(0, jp - s)
+        };
+        updater(GID, rowNumber, updatedRow, setter, data);
       };
 
       const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
@@ -1286,7 +1329,20 @@
         }
       ];
 
-      const handleSaveEdit = (rowNumber, newRowData) => updater(GID, rowNumber, newRowData, setter, data);
+      // KEMAS KINI MENGGUNAKAN KONSEP PENAMBAHAN DELTA PADA EXISTING RECORD
+      const handleSaveEdit = (rowNumber, deltaData) => {
+        const existingRecord = data.find(d => d._rowNumber === rowNumber);
+        if(!existingRecord) return;
+        
+        const updatedRow = {
+          ...existingRecord,
+          'Jumlah Doket': (Number(existingRecord['Jumlah Doket']) || 0) + (Number(deltaData['Jumlah Doket']) || 0),
+          'Jumlah RM': (Number(existingRecord['Jumlah RM']) || 0) + (Number(deltaData['Jumlah RM']) || 0),
+          'Tanggungan Tahun Sebelum RM': (Number(existingRecord['Tanggungan Tahun Sebelum RM']) || 0) + (Number(deltaData['Tanggungan Tahun Sebelum RM']) || 0)
+        };
+        updater(GID, rowNumber, updatedRow, setter, data);
+      };
+
       const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
       
       const handleAddSave = () => {
