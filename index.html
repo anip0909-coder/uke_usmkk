@@ -26,11 +26,25 @@
 
   <!-- Babel Compiler (Gunakan versi yang stabil) -->
   <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
+
+  <style>
+    /* Tambahan CSS untuk mencantikkan hasil cetakan PDF */
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        background-color: white !important;
+      }
+      .recharts-wrapper {
+        page-break-inside: avoid !important;
+      }
+    }
+  </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
   <div id="root"></div>
 
-  <!-- Logik Aplikasi React -->
+  <!-- Logik Aplikasi React (PENTING: Jangan gunakan data-presets="react,env" yang boleh menyebabkan ralat import) -->
   <script type="text/babel">
     const { useState, useEffect, useMemo, useCallback } = React;
     const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts;
@@ -53,7 +67,8 @@
         Menu: <svg {...svgProps}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
         AlertCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
         PlusCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
-        RefreshCw: <svg {...svgProps}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        RefreshCw: <svg {...svgProps}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+        Printer: <svg {...svgProps}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
       };
       return icons[name] || null;
     };
@@ -260,7 +275,7 @@
 
       return (
         <div className={`min-h-screen font-sans ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-800'}`}>
-          <div className={`fixed top-0 left-0 right-0 h-16 z-50 flex items-center justify-between px-4 shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className={`fixed top-0 left-0 right-0 h-16 z-50 flex items-center justify-between px-4 shadow-md print:hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
             <div className="flex items-center space-x-4">
               <button className="md:hidden p-2" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                 <Icon name="Menu" size={24} />
@@ -270,7 +285,7 @@
               </h1>
             </div>
             
-            <div className="flex items-center space-x-2 md:space-x-4">
+            <div className="flex items-center space-x-2 md:space-x-4 print:hidden">
               <div className="hidden md:flex space-x-1">
                 {navItems.map(item => (
                   <button
@@ -288,9 +303,14 @@
                 ))}
               </div>
               
+              <button onClick={() => window.print()} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-slate-600 dark:text-slate-400" title="Cetak / Simpan PDF">
+                <Icon name="Printer" size={20} />
+              </button>
+
               <button onClick={fetchData} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400" title="Segarkan Data Terkini">
                 <Icon name="RefreshCw" size={20} />
               </button>
+
               <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Tukar Mod Paparan">
                 <Icon name={darkMode ? 'Sun' : 'Moon'} size={20} />
               </button>
@@ -298,7 +318,7 @@
           </div>
 
           {isMobileMenuOpen && (
-            <div className={`md:hidden fixed top-16 left-0 right-0 z-40 shadow-lg border-t ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+            <div className={`md:hidden fixed top-16 left-0 right-0 z-40 shadow-lg border-t print:hidden ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
               <div className="flex flex-col p-2">
                 {navItems.map(item => (
                   <button
@@ -318,9 +338,9 @@
             </div>
           )}
 
-          <div className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto print:pt-4">
             {error && (
-              <div className="bg-amber-100 border border-amber-400 text-amber-800 px-6 py-5 rounded-lg flex items-start shadow-sm mb-6">
+              <div className="bg-amber-100 border border-amber-400 text-amber-800 px-6 py-5 rounded-lg flex items-start shadow-sm mb-6 print:hidden">
                 <Icon name="AlertCircle" className="mr-3 mt-1 flex-shrink-0" />
                 <div className="flex-1">
                   <h3 className="font-bold text-lg mb-1">Amaran Sambungan Rangkaian</h3>
@@ -371,7 +391,7 @@
       return (
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium min-w-[3.5rem] text-right">{formatted}%</span>
-          <div className="w-full max-w-[100px] bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden">
+          <div className="w-full max-w-[100px] bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden border border-gray-300 dark:border-gray-600">
             <div className={`${colorClass} h-2.5 rounded-full`} style={{ width: `${Math.min(peratusNum, 100)}%` }}></div>
           </div>
         </div>
@@ -537,6 +557,19 @@
         })).sort((a,b) => b.peratus - a.peratus).slice(0, 10);
       }, [fDv3]);
 
+      const chart5Data = useMemo(() => {
+        const grouped = fKon.reduce((acc, curr) => {
+          const k = curr.Kontraktor || 'Tiada Nama';
+          acc[k] = (acc[k] || 0) + (Number(curr['Jumlah RM']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({
+          name: k,
+          RM: grouped[k]
+        })).sort((a,b) => b.RM - a.RM).slice(0, 10);
+      }, [fKon]);
+
+      // Jadual PPM Keseluruhan
       const ppmTableData = useMemo(() => {
         const grouped = fPpm.reduce((acc, curr) => {
           const p = curr.Penyenggara || 'Tiada Nama';
@@ -761,7 +794,6 @@
         }
       ];
 
-      // KEMAS KINI MENGGUNAKAN KONSEP PENAMBAHAN DELTA PADA EXISTING RECORD
       const handleSaveEdit = (rowNumber, deltaData) => {
         const existingRecord = data.find(d => d._rowNumber === rowNumber);
         if(!existingRecord) return;
@@ -865,7 +897,7 @@
             </ChartCard>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 print:hidden">
             <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-t-lg border-b dark:border-gray-700">
               <div className="w-full text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Penapis Khusus Jadual Rekod DV3</div>
               <FilterSelect label="Tahun" value={tTahun} options={tahunOptions} onChange={setTTahun} />
@@ -886,7 +918,7 @@
           
           {/* Modal Tambah DV3 */}
           {isAddModalOpen && (
-            <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4 print:hidden">
               <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-lg shadow-xl overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Tambah Rekod DV3</h3>
@@ -1021,6 +1053,7 @@
         return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] })).sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
       }, [globalFiltered]);
 
+      // Tukar tak siap readOnly, Jadikan Jumlah PPM boleh diedit
       const columns = [
         { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
         { key: 'Bulan', label: 'Bulan', type: 'text', readOnly: true },
@@ -1037,7 +1070,6 @@
         }
       ];
 
-      // KEMAS KINI MENGGUNAKAN KONSEP PENAMBAHAN DELTA PADA EXISTING RECORD
       const handleSaveEdit = (rowNumber, deltaData) => {
         const existingRecord = data.find(d => d._rowNumber === rowNumber);
         if(!existingRecord) return;
@@ -1140,7 +1172,7 @@
             </ChartCard>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 print:hidden">
             <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-t-lg border-b dark:border-gray-700">
               <div className="w-full text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Penapis Khusus Jadual Rekod PPM</div>
               <FilterSelect label="Tahun" value={tTahun} options={tahunOptions} onChange={setTTahun} />
@@ -1161,7 +1193,7 @@
           
           {/* Modal Tambah PPM */}
           {isAddModalOpen && (
-            <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4 print:hidden">
               <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-lg shadow-xl overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Tambah Rekod PPM</h3>
@@ -1423,7 +1455,7 @@
             
             <ChartCard title="Nilai RM Mengikut Bulan">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart4Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
+                <BarChart data={chart4Data} margin={{ top: 40, right: 20, left: 0, bottom: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={80} />
                   <YAxis stroke={colors.text} />
@@ -1458,7 +1490,7 @@
             </ChartCard>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 print:hidden">
             <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-t-lg border-b dark:border-gray-700">
               <div className="w-full text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Penapis Khusus Jadual Rekod Kontraktor</div>
               <FilterSelect label="Tahun" value={tTahun} options={tahunOptions} onChange={setTTahun} />
@@ -1479,7 +1511,7 @@
           
           {/* Modal Tambah Kontraktor */}
           {isAddModalOpen && (
-            <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4 print:hidden">
               <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-lg shadow-xl overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Tambah Rekod Kontraktor</h3>
@@ -1552,7 +1584,7 @@
       };
 
       return (
-        <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+        <div className="max-w-2xl mx-auto space-y-6 animate-fade-in print:hidden">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold flex items-center">
