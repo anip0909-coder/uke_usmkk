@@ -90,6 +90,22 @@
       return shortIdx !== -1 ? shortIdx : 99;
     };
 
+    // Data Simulasi/Mock Jika Apps Script Gagal
+    const mockData = {
+      dv3: [
+        { _rowNumber: 2, id: 'm1', Tahun: 2024, Bulan: 'Januari', Penyenggara: 'Ali', 'Jumlah Doket': 10, Siap: 8, 'Tak Siap': 2, Batal: 0 },
+        { _rowNumber: 3, id: 'm2', Tahun: 2024, Bulan: 'Februari', Penyenggara: 'Muthu', 'Jumlah Doket': 15, Siap: 12, 'Tak Siap': 2, Batal: 1 },
+      ],
+      ppm: [
+        { _rowNumber: 2, id: 'm3', Tahun: 2024, Bulan: 'Januari', Penyenggara: 'Chong', 'Jumlah PPM': 5, Siap: 5, 'Tak Siap': 0 },
+        { _rowNumber: 3, id: 'm4', Tahun: 2024, Bulan: 'Februari', Penyenggara: 'Muthu', 'Jumlah PPM': 8, Siap: 6, 'Tak Siap': 2 },
+      ],
+      kon: [
+        { _rowNumber: 2, id: 'm5', Tahun: 2024, Bulan: 'Januari', Kontraktor: 'Syarikat Maju', Zon: 'Zon A', 'Jumlah Doket': 20, 'Jumlah RM': 15000, 'Tanggungan Tahun Sebelum RM': 2000 },
+        { _rowNumber: 3, id: 'm6', Tahun: 2024, Bulan: 'Februari', Kontraktor: 'Bina Jaya', Zon: 'Zon B', 'Jumlah Doket': 35, 'Jumlah RM': 28500, 'Tanggungan Tahun Sebelum RM': 0 },
+      ]
+    };
+
     function App() {
       const [darkMode, setDarkMode] = useState(false);
       const [activeTab, setActiveTab] = useState('main');
@@ -111,7 +127,8 @@
       // --- Fetch Data dari Google Apps Script API ---
       const fetchData = useCallback(async () => {
         if (!APPSCRIPT_URL || APPSCRIPT_URL.includes("MASUKKAN_URL")) {
-           setError("Sila masukkan URL Web App Apps Script pada pembolehubah APPSCRIPT_URL.");
+           setError("Sila masukkan URL Web App Apps Script pada pembolehubah APPSCRIPT_URL di dalam fail index.html");
+           setDv3Data(mockData.dv3); setPpmData(mockData.ppm); setKontraktorData(mockData.kon);
            setLoading(false);
            return;
         }
@@ -138,7 +155,10 @@
           
         } catch (err) {
           console.error("Ralat mengambil data dari Apps Script:", err);
-          setError("Gagal menyambung ke pangkalan data Google Sheets. Sila pastikan Web App telah di 'Deploy' dengan 'Execute as: Me' dan 'Access: Anyone'.");
+          setError("Gagal menyambung ke pangkalan data Google Sheets. Memaparkan data demo (Mock Data) untuk sementara waktu.");
+          setDv3Data(mockData.dv3);
+          setPpmData(mockData.ppm);
+          setKontraktorData(mockData.kon);
         } finally {
           setLoading(false);
         }
@@ -167,61 +187,68 @@
         { id: 'tetapan', label: 'Tetapan', icon: 'Settings' },
       ];
 
-      // --- LOGIK POST KE APPS SCRIPT YANG TELAH DIPERBAIKI ---
-      const sendPostRequest = async (payload) => {
-        const response = await fetch(APPSCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify(payload) // Gunakan payload JSON biasa tanpa custom headers untuk melepasi CORS
-        });
-        
-        const textRes = await response.text();
-        try {
-          const result = JSON.parse(textRes);
-          if (!result.success) throw new Error(result.error || "Ralat Dalaman Pelayan.");
-          return result;
-        } catch (e) {
-          console.error("Respon tidak sah (bukan JSON):", textRes);
-          throw new Error("Gagal menyimpan data ke pelayan. Sila pastikan Apps Script anda mempunyai fungsi yang sah.");
-        }
-      };
-
+      // --- Logik Pengemaskinian Data ke Apps Script ---
       const updateSheetData = async (gid, rowNumber, newData, setter, localData) => {
-        setLoading(true);
+        const updated = localData.map(d => d._rowNumber === rowNumber ? { ...d, ...newData } : d);
+        setter(updated);
         try {
-          await sendPostRequest({ action: 'update', gid: gid, rowNumber: rowNumber, data: newData });
-          alert("Rekod berjaya dikemaskini dan disegerakkan dengan Google Sheets!");
-          await fetchData();
+          const response = await fetch(APPSCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'update', gid: gid, rowNumber: rowNumber, data: newData })
+          });
+          const textRes = await response.text();
+          const result = JSON.parse(textRes);
+          if (result && result.success) alert("Rekod berjaya dikemaskini di Google Sheet!");
+          else throw new Error("Gagal");
         } catch (e) {
-          console.error("Ralat sync (update):", e);
-          alert(`Gagal: ${e.message}`);
-          setLoading(false);
+          console.error("Ralat sync:", e);
+          alert("Gagal menghubungi pangkalan data Google Sheet. Data disimpan dalam mod luar talian (sementara).");
         }
       };
 
       const deleteSheetData = async (gid, rowNumber, setter, localData) => {
         if(confirm("Padam rekod ini secara kekal dari Google Sheet?")) {
-          setLoading(true);
+          const updated = localData.filter(d => d._rowNumber !== rowNumber);
+          setter(updated);
           try {
-            await sendPostRequest({ action: 'delete', gid: gid, rowNumber: rowNumber });
-            alert("Rekod berjaya dipadam dari Google Sheets!");
-            await fetchData();
+            const response = await fetch(APPSCRIPT_URL, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'delete', gid: gid, rowNumber: rowNumber })
+            });
+            const textRes = await response.text();
+            const result = JSON.parse(textRes);
+            if (result && result.success) alert("Rekod berjaya dipadam dari Google Sheet!");
+            else throw new Error("Gagal");
           } catch (e) {
             console.error("Ralat padam:", e);
-            alert(`Gagal: ${e.message}`);
-            setLoading(false);
+            alert("Gagal menghubungi pangkalan data Google Sheet. Data dipadam dalam mod luar talian (sementara).");
           }
         }
       };
 
+      // Fungsi standard untuk tambah row baharu
       const addSheetData = async (gid, newData, setter, localData) => {
         setLoading(true);
         try {
-          await sendPostRequest({ action: 'add', gid: gid, data: newData });
-          alert("Rekod baharu berjaya disimpan ke dalam Google Sheets!");
-          await fetchData(); 
+          const response = await fetch(APPSCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'add', gid: gid, data: newData })
+          });
+          const textRes = await response.text();
+          const result = JSON.parse(textRes);
+          
+          if (result && result.success) {
+            alert("Rekod baharu berjaya disimpan ke Google Sheet!");
+            await fetchData(); 
+          } else {
+            throw new Error("Respon tidak berjaya");
+          }
         } catch (e) {
           console.error("Ralat sync (add):", e);
-          alert(`Gagal menambah data: ${e.message}`);
+          alert("Gagal menambah data ke Google Sheet. Data disimpan sementara.");
+          const tempRowNumber = Date.now(); 
+          const newRecord = { ...newData, id: `temp-${tempRowNumber}`, _rowNumber: tempRowNumber };
+          setter([...localData, newRecord]);
           setLoading(false);
         }
       };
@@ -230,7 +257,7 @@
         return (
           <div className={`min-h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-            <span className="text-lg font-semibold">Memuatkan dan Menyelaraskan Data...</span>
+            <span className="text-lg">Memuatkan Data dari Google Sheets...</span>
           </div>
         );
       }
@@ -316,7 +343,7 @@
               <div className="bg-amber-100 border border-amber-400 text-amber-800 px-6 py-5 rounded-lg flex items-start shadow-sm mb-6 print:hidden">
                 <Icon name="AlertCircle" className="mr-3 mt-1 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="font-bold text-lg mb-1">Amaran Sistem</h3>
+                  <h3 className="font-bold text-lg mb-1">Amaran Sambungan Rangkaian</h3>
                   <p>{error}</p>
                 </div>
               </div>
@@ -506,6 +533,7 @@
         return [{ name: 'Siap', value: siap }, { name: 'Tak Siap', value: takSiap }];
       }, [fPpm]);
 
+      // Menggantikan Chart Ranking Kontraktor dengan % RM Mengikut Zon di Tab Utama
       const chartZonPieDataMain = useMemo(() => {
         const grouped = fKon.reduce((acc, curr) => {
           const z = curr.Zon ? String(curr.Zon).trim() : 'Lain-lain';
@@ -529,6 +557,19 @@
         })).sort((a,b) => b.peratus - a.peratus).slice(0, 10);
       }, [fDv3]);
 
+      const chart5Data = useMemo(() => {
+        const grouped = fKon.reduce((acc, curr) => {
+          const k = curr.Kontraktor || 'Tiada Nama';
+          acc[k] = (acc[k] || 0) + (Number(curr['Jumlah RM']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({
+          name: k,
+          RM: grouped[k]
+        })).sort((a,b) => b.RM - a.RM).slice(0, 10);
+      }, [fKon]);
+
+      // Jadual PPM Keseluruhan
       const ppmTableData = useMemo(() => {
         const grouped = fPpm.reduce((acc, curr) => {
           const p = curr.Penyenggara || 'Tiada Nama';
@@ -1012,6 +1053,7 @@
         return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] })).sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
       }, [globalFiltered]);
 
+      // Tukar tak siap readOnly, Jadikan Jumlah PPM boleh diedit
       const columns = [
         { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
         { key: 'Bulan', label: 'Bulan', type: 'text', readOnly: true },
@@ -1415,7 +1457,7 @@
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chart4Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} />
+                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={80} />
                   <YAxis stroke={colors.text} />
                   <Tooltip formatter={(v) => `RM ${Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                   <Bar dataKey="RM" fill={colors.success} name="Jumlah RM" radius={[4, 4, 0, 0]}>
