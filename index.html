@@ -194,6 +194,11 @@
         try {
           const response = await fetch(APPSCRIPT_URL, {
             method: 'POST',
+            mode: 'cors',
+            redirect: 'follow',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8'
+            },
             body: JSON.stringify({ action: 'update', gid: gid, rowNumber: rowNumber, data: newData })
           });
           const textRes = await response.text();
@@ -213,6 +218,11 @@
           try {
             const response = await fetch(APPSCRIPT_URL, {
               method: 'POST',
+              mode: 'cors',
+              redirect: 'follow',
+              headers: {
+                'Content-Type': 'text/plain;charset=utf-8'
+              },
               body: JSON.stringify({ action: 'delete', gid: gid, rowNumber: rowNumber })
             });
             const textRes = await response.text();
@@ -232,6 +242,11 @@
         try {
           const response = await fetch(APPSCRIPT_URL, {
             method: 'POST',
+            mode: 'cors',
+            redirect: 'follow',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8'
+            },
             body: JSON.stringify({ action: 'add', gid: gid, data: newData })
           });
           const textRes = await response.text();
@@ -245,7 +260,7 @@
           }
         } catch (e) {
           console.error("Ralat sync (add):", e);
-          alert("Gagal menambah data ke Google Sheet. Data disimpan sementara.");
+          alert("Gagal menambah data ke Google Sheet. Sila pastikan sambungan internet stabil.");
           const tempRowNumber = Date.now(); 
           const newRecord = { ...newData, id: `temp-${tempRowNumber}`, _rowNumber: tempRowNumber };
           setter([...localData, newRecord]);
@@ -1457,7 +1472,7 @@
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chart4Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={80} />
+                  <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip formatter={(v) => `RM ${Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                   <Bar dataKey="RM" fill={colors.success} name="Jumlah RM" radius={[4, 4, 0, 0]}>
