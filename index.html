@@ -1264,7 +1264,7 @@
         Tahun: new Date().getFullYear(),
         Bulan: 'Januari',
         Kontraktor: '',
-        Zon: '',
+        Zon: 'Kampus', // Tetapan awal lalai untuk dropdown
         'Jumlah Doket': 0,
         'Jumlah RM': 0,
         'Tanggungan Tahun Sebelum RM': 0
@@ -1404,7 +1404,7 @@
          }
          
          setIsAddModalOpen(false);
-         setAddForm({ Tahun: new Date().getFullYear(), Bulan: 'Januari', Kontraktor: '', Zon: '', 'Jumlah Doket': 0, 'Jumlah RM': 0, 'Tanggungan Tahun Sebelum RM': 0 });
+         setAddForm({ Tahun: new Date().getFullYear(), Bulan: 'Januari', Kontraktor: '', Zon: 'Kampus', 'Jumlah Doket': 0, 'Jumlah RM': 0, 'Tanggungan Tahun Sebelum RM': 0 });
       };
 
       return (
@@ -1455,9 +1455,9 @@
             
             <ChartCard title="Nilai RM Mengikut Bulan">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart4Data} margin={{ top: 40, right: 20, left: 0, bottom: 80 }}>
+                <BarChart data={chart4Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={80} />
+                  <XAxis dataKey="name" stroke={colors.text} />
                   <YAxis stroke={colors.text} />
                   <Tooltip formatter={(v) => `RM ${Number(v).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                   <Bar dataKey="RM" fill={colors.success} name="Jumlah RM" radius={[4, 4, 0, 0]}>
@@ -1537,7 +1537,10 @@
                     </div>
                     <div>
                       <label className="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Zon</label>
-                      <input type="text" value={addForm.Zon} onChange={(e) => setAddForm({...addForm, Zon: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500" placeholder="Zon" />
+                      <select value={addForm.Zon} onChange={(e) => setAddForm({...addForm, Zon: e.target.value})} className="w-full border rounded p-2 outline-none dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-blue-500">
+                        <option value="Kampus">Kampus</option>
+                        <option value="Hospital">Hospital</option>
+                      </select>
                     </div>
                   </div>
                   <div>
