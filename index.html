@@ -1198,6 +1198,20 @@
         return Object.keys(grouped).map(k => ({ name: k, Selesai: grouped[k].Selesai, Perancangan: grouped[k].Perancangan })).sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
       }, [globalFiltered]);
 
+      const ppmSummaryTable = useMemo(() => {
+        const grouped = globalFiltered.reduce((acc, curr) => {
+          const p = curr.Penyenggara || 'Tiada Nama';
+          if (!acc[p]) acc[p] = { Penyenggara: p, Siap: 0, TakSiap: 0, JumlahPPM: 0 };
+          acc[p].Siap += (Number(curr['Siap']) || 0);
+          acc[p].TakSiap += (Number(curr['Tak Siap']) || 0);
+          acc[p].JumlahPPM += (Number(curr['Jumlah PPM']) || 0);
+          return acc;
+        }, {});
+        return Object.values(grouped).map(item => ({
+          ...item, PeratusNum: item.JumlahPPM > 0 ? ((item.Siap / item.JumlahPPM) * 100) : 0
+        })).sort((a, b) => b.PeratusNum - a.PeratusNum);
+      }, [globalFiltered]);
+
       // Tukar tak siap readOnly, Jadikan Jumlah PPM boleh diedit
       const columns = [
         { key: 'Tahun', label: 'Tahun', type: 'text', readOnly: true },
@@ -1319,6 +1333,37 @@
                 </LineChart>
               </ResponsiveContainer>
             </ChartCard>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Jadual Prestasi Penyenggara (PPM) Keseluruhan</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-300">
+                  <tr>
+                    <th className="px-4 py-3">Penyenggara</th>
+                    <th className="px-4 py-3 text-center">Jumlah PPM</th>
+                    <th className="px-4 py-3 text-center">Siap</th>
+                    <th className="px-4 py-3 text-center">Tak Siap</th>
+                    <th className="px-4 py-3">% Siap</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ppmSummaryTable.map((row, i) => (
+                    <tr key={i} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="px-4 py-2 font-medium">{row.Penyenggara}</td>
+                      <td className="px-4 py-2 text-center">{row.JumlahPPM}</td>
+                      <td className="px-4 py-2 text-center text-green-600 font-semibold">{row.Siap}</td>
+                      <td className="px-4 py-2 text-center text-red-600 font-semibold">{row.TakSiap}</td>
+                      <td className="px-4 py-2"><ProgressBar peratus={row.PeratusNum} decimals={2} /></td>
+                    </tr>
+                  ))}
+                  {ppmSummaryTable.length === 0 && <tr><td colSpan={5} className="text-center py-8 text-gray-500">Tiada rekod ditemui berdasarkan penapis semasa.</td></tr>}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="mt-8 print:hidden">
