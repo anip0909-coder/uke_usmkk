@@ -528,10 +528,12 @@
       }, [dv3]);
 
       const chart2Data = useMemo(() => {
-        let siap = 0, takSiap = 0;
-        fPpm.forEach(curr => { siap += (Number(curr['Siap']) || 0); takSiap += (Number(curr['Tak Siap']) || 0); });
-        return [{ name: 'Siap', value: siap }, { name: 'Tak Siap', value: takSiap }];
-      }, [fPpm]);
+        return [
+          { name: 'Siap', value: mSiap },
+          { name: 'Tak Siap', value: mTakSiap },
+          { name: 'Batal', value: mBatal }
+        ];
+      }, [mSiap, mTakSiap, mBatal]);
 
       // Menggantikan Chart Ranking Kontraktor dengan % RM Mengikut Zon di Tab Utama
       const chartZonPieDataMain = useMemo(() => {
@@ -615,7 +617,7 @@
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title={`Prestasi PPM Keseluruhan (${filterTahun})`}>
+            <ChartCard title={`Prestasi DV3 Keseluruhan (${filterTahun})`}>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -624,10 +626,10 @@
                     outerRadius={100} dataKey="value"
                   >
                     {chart2Data.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.name === 'Siap' ? colors.success : colors.danger} />
+                      <Cell key={`cell-${index}`} fill={entry.name === 'Siap' ? colors.success : (entry.name === 'Tak Siap' ? colors.danger : colors.warning)} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => `${value} PPM`} />
+                  <Tooltip formatter={(value) => `${value} Doket`} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -1047,10 +1049,12 @@
       const chart2Data = useMemo(() => {
         const grouped = globalFiltered.reduce((acc, curr) => {
           const b = curr.Bulan ? String(curr.Bulan).trim() : 'Tiada';
-          acc[b] = (acc[b] || 0) + (Number(curr['Jumlah PPM']) || 0);
+          if (!acc[b]) acc[b] = { Selesai: 0, Perancangan: 0 };
+          acc[b].Selesai += (Number(curr['Siap']) || 0);
+          acc[b].Perancangan += (Number(curr['Jumlah PPM']) || 0);
           return acc;
         }, {});
-        return Object.keys(grouped).map(k => ({ name: k, Jumlah: grouped[k] })).sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
+        return Object.keys(grouped).map(k => ({ name: k, Selesai: grouped[k].Selesai, Perancangan: grouped[k].Perancangan })).sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
       }, [globalFiltered]);
 
       // Tukar tak siap readOnly, Jadikan Jumlah PPM boleh diedit
@@ -1157,15 +1161,19 @@
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Trend Bulanan PPM">
+            <ChartCard title="Trend Bulanan PPM (Selesai vs Perancangan)">
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={chart2Data} margin={{ top: 40, right: 20, left: 0, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                   <XAxis dataKey="name" stroke={colors.text} interval={0} tick={{ fontSize: 11, angle: -45, textAnchor: 'end' }} height={60} />
                   <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="Jumlah" stroke={colors.purple} strokeWidth={3}>
-                    <LabelList dataKey="Jumlah" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
+                  <Legend verticalAlign="top" height={36} />
+                  <Line type="monotone" dataKey="Selesai" stroke={colors.success} strokeWidth={3}>
+                    <LabelList dataKey="Selesai" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
+                  </Line>
+                  <Line type="monotone" dataKey="Perancangan" stroke={colors.purple} strokeWidth={3}>
+                    <LabelList dataKey="Perancangan" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
                   </Line>
                 </LineChart>
               </ResponsiveContainer>
