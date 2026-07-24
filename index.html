@@ -68,7 +68,14 @@
         AlertCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
         PlusCircle: <svg {...svgProps}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
         RefreshCw: <svg {...svgProps}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
-        Printer: <svg {...svgProps}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Printer: <svg {...svgProps}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
+        Users: <svg {...svgProps}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+        DollarSign: <svg {...svgProps}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+        Bell: <svg {...svgProps}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+        Maximize: <svg {...svgProps}><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>,
+        ChevronRight: <svg {...svgProps}><polyline points="9 18 15 12 9 6"/></svg>,
+        Clipboard: <svg {...svgProps}><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>,
+        BarChart2: <svg {...svgProps}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       };
       return icons[name] || null;
     };
@@ -264,7 +271,7 @@
 
       const renderTabContent = () => {
         switch (activeTab) {
-          case 'main': return <MainDashboard dv3={dv3Data} ppm={ppmData} kon={kontraktorData} colors={colors} />;
+          case 'main': return <MainDashboard dv3={dv3Data} ppm={ppmData} kon={kontraktorData} colors={colors} setActiveTab={setActiveTab} />;
           case 'dv3': return <DV3Dashboard data={dv3Data} updater={updateSheetData} deleter={deleteSheetData} adder={addSheetData} setter={setDv3Data} colors={colors} />;
           case 'ppm': return <PPMDashboard data={ppmData} updater={updateSheetData} deleter={deleteSheetData} adder={addSheetData} setter={setPpmData} colors={colors} />;
           case 'kontraktor': return <KontraktorDashboard data={kontraktorData} updater={updateSheetData} deleter={deleteSheetData} adder={addSheetData} setter={setKontraktorData} colors={colors} />;
@@ -372,6 +379,19 @@
         </div>
       );
     }
+
+    const StatCard = ({ title, value, subtext, icon, accent }) => (
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-start gap-3">
+        <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${accent.bg}`}>
+          <Icon name={icon} size={20} className={accent.text} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{title}</p>
+          <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 truncate">{value}</p>
+          {subtext && <p className="text-xs text-gray-400 mt-0.5 truncate">{subtext}</p>}
+        </div>
+      </div>
+    );
 
     const iconBgMap = {
       'text-blue-500': 'bg-blue-100 dark:bg-blue-500/20',
@@ -527,7 +547,7 @@
     // ==========================================
     // 1. MAIN DASHBOARD TAB
     // ==========================================
-    const MainDashboard = ({ dv3, ppm, kon, colors }) => {
+    const MainDashboard = ({ dv3, ppm, kon, colors, setActiveTab }) => {
       const [filterBulan, setFilterBulan] = useState('Semua');
       const [filterTahun, setFilterTahun] = useState('Semua');
 
@@ -605,6 +625,19 @@
         })).sort((a,b) => b.RM - a.RM).slice(0, 10);
       }, [fKon]);
 
+      // Trend Bulanan PPM: Selesai (Siap) vs Perancangan (Jumlah PPM)
+      const chartTrendPPM = useMemo(() => {
+        const source = ppm.filter(d => filterTahun === 'Semua' || String(d.Tahun) === String(filterTahun));
+        const grouped = source.reduce((acc, curr) => {
+          const b = curr.Bulan ? String(curr.Bulan).trim() : 'Tiada';
+          if (!acc[b]) acc[b] = { Selesai: 0, Perancangan: 0 };
+          acc[b].Selesai += (Number(curr['Siap']) || 0);
+          acc[b].Perancangan += (Number(curr['Jumlah PPM']) || 0);
+          return acc;
+        }, {});
+        return Object.keys(grouped).map(k => ({ name: k, Selesai: grouped[k].Selesai, Perancangan: grouped[k].Perancangan })).sort((a,b) => getBulanIndex(a.name) - getBulanIndex(b.name));
+      }, [ppm, filterTahun]);
+
       // Jadual PPM Keseluruhan
       const ppmTableData = useMemo(() => {
         const grouped = fPpm.reduce((acc, curr) => {
@@ -620,6 +653,14 @@
         })).sort((a,b) => b.PeratusNum - a.PeratusNum);
       }, [fPpm]);
 
+      const accents = {
+        blue: { bg: 'bg-blue-100 dark:bg-blue-500/20', text: 'text-blue-500' },
+        green: { bg: 'bg-green-100 dark:bg-green-500/20', text: 'text-green-500' },
+        purple: { bg: 'bg-purple-100 dark:bg-purple-500/20', text: 'text-purple-500' },
+        yellow: { bg: 'bg-yellow-100 dark:bg-yellow-500/20', text: 'text-yellow-500' },
+        red: { bg: 'bg-red-100 dark:bg-red-500/20', text: 'text-red-500' },
+      };
+
       return (
         <div className="space-y-6 animate-fade-in">
           <div className="flex flex-wrap gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
@@ -627,121 +668,175 @@
             <FilterSelect label="Bulan" value={filterBulan} options={bulanOptions} onChange={setFilterBulan} />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <MetricCard title="Jumlah Doket (DV3)" value={mJumlahDoket} color="text-blue-500" icon="Activity" />
-            <MetricCard title="Doket Siap" value={mSiap} subtext={`${pSiap}%`} color="text-green-500" icon="Check" />
-            <MetricCard title="Doket Tak Siap" value={mTakSiap} subtext={`${pTakSiap}%`} color="text-red-500" icon="X" />
-            <MetricCard title="Doket Batal" value={mBatal} subtext={`${pBatal}%`} color="text-gray-500" icon="Trash2" />
-            <MetricCard title="Jumlah PPM" value={mJumlahPPM} color="text-purple-500" icon="CheckSquare" />
-            <MetricCard title="Jumlah RM (Kontraktor)" value={`RM ${mJumlahRM.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} color="text-yellow-500" icon="Wrench" />
+          {/* Kad Ringkasan Utama */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard title="Jumlah Doket (DV3)" value={mJumlahDoket} subtext={`${pSiap}% selesai`} icon="Activity" accent={accents.blue} />
+            <StatCard title="Jumlah PPM" value={mJumlahPPM} subtext="Tugasan penyenggaraan" icon="CheckSquare" accent={accents.purple} />
+            <StatCard title="Doket Tak Siap" value={mTakSiap} subtext={`${pTakSiap}% daripada jumlah`} icon="AlertCircle" accent={accents.red} />
+            <StatCard title="Jumlah RM Kontraktor" value={`RM ${mJumlahRM.toLocaleString('en-MY', {maximumFractionDigits: 0})}`} subtext={`${fKon.length} rekod kontraktor`} icon="Wrench" accent={accents.yellow} />
           </div>
 
+          {/* Donut Prestasi DV3 + Trend PPM */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartCard title="Prestasi DV3 (Jumlah Doket Tahunan)">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart1Data} margin={{ top: 40, right: 20, left: 0, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis dataKey="name" stroke={colors.text} />
-                  <YAxis stroke={colors.text} />
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--tw-bg-opacity)', color: 'black' }} />
-                  <Bar dataKey="value" fill={colors.primary} name="Jumlah Doket" radius={[4, 4, 0, 0]}>
-                    <LabelList dataKey="value" position="top" angle={-90} offset={20} fill={colors.text} fontSize={12} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-
-            <ChartCard title={`Prestasi DV3 Keseluruhan (${filterTahun})`}>
-              <div className="relative w-full">
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={chart2Data} cx="50%" cy="50%" labelLine={true}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                      innerRadius={65} outerRadius={100} dataKey="value"
-                    >
-                      {chart2Data.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.name === 'Siap' ? colors.success : (entry.name === 'Tak Siap' ? colors.danger : colors.warning)} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `${value} Doket`} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                  <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{pSiap}%</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Selesai</p>
+            <ChartCard title={`Prestasi DV3 (${filterTahun})`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div className="relative">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie data={chart2Data} cx="50%" cy="50%" innerRadius={60} outerRadius={90} dataKey="value" startAngle={90} endAngle={-270}>
+                        {chart2Data.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.name === 'Siap' ? colors.success : (entry.name === 'Tak Siap' ? colors.danger : colors.warning)} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => `${value} Doket`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{pSiap}%</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Selesai</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Jumlah Doket</p>
+                    <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{mJumlahDoket}</p>
+                  </div>
+                  {chart2Data.map((entry, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ background: entry.name === 'Siap' ? colors.success : (entry.name === 'Tak Siap' ? colors.danger : colors.warning) }}></span>
+                        {entry.name}
+                      </span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-100">{entry.value} ({mJumlahDoket > 0 ? ((entry.value / mJumlahDoket) * 100).toFixed(0) : 0}%)</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </ChartCard>
 
-            <ChartCard title={`Ranking Penyenggara (% Siap DV3)`}>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chart4Data} layout="vertical" margin={{ top: 20, right: 50, left: 50, bottom: 5 }}>
+            <ChartCard title="Trend Bulanan PPM (Selesai vs Perancangan)">
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={chartTrendPPM} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                  <XAxis type="number" domain={[0, 100]} stroke={colors.text} />
-                  <YAxis type="category" dataKey="name" stroke={colors.text} width={120} interval={0} tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="name" stroke={colors.text} tick={{ fontSize: 11 }} />
+                  <YAxis stroke={colors.text} />
                   <Tooltip />
-                  <Bar dataKey="peratus" fill={colors.success} name="% Siap" radius={[0, 4, 4, 0]}>
-                    <LabelList dataKey="peratus" position="right" fill={colors.text} fontSize={12} formatter={(v) => `${v}%`} />
-                  </Bar>
-                </BarChart>
+                  <Legend verticalAlign="top" height={30} />
+                  <Line type="monotone" dataKey="Selesai" name="Selesai" stroke={colors.success} strokeWidth={3} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="Perancangan" name="Perancangan" stroke={colors.primary} strokeWidth={3} dot={{ r: 4 }} />
+                </LineChart>
               </ResponsiveContainer>
             </ChartCard>
+          </div>
 
-            <ChartCard title="% RM Mengikut Zon" className="lg:col-span-2">
-              <div className="relative w-full">
-                <ResponsiveContainer width="100%" height={300}>
+          {/* Jadual Prestasi Penyenggara / % RM Zon / Ranking Penyenggara */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <ChartCard title="Jadual Prestasi Penyenggara (PPM) Keseluruhan">
+              <div className="max-h-[340px] overflow-y-auto -mx-1 px-1">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-300 sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2">Penyenggara</th>
+                      <th className="px-3 py-2 text-center">PPM</th>
+                      <th className="px-3 py-2">% Siap</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ppmTableData.map((row, i) => (
+                      <tr key={i} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="px-3 py-2 font-medium truncate max-w-[100px]">{row.Penyenggara}</td>
+                        <td className="px-3 py-2 text-center">{row.JumlahPPM}</td>
+                        <td className="px-3 py-2"><ProgressBar peratus={row.PeratusNum} decimals={0} /></td>
+                      </tr>
+                    ))}
+                    {ppmTableData.length === 0 && <tr><td colSpan={3} className="text-center py-6 text-gray-400">Tiada data</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </ChartCard>
+
+            <ChartCard title="% RM Kontraktor Mengikut Zon">
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie
-                      data={chartZonPieDataMain} cx="50%" cy="50%" labelLine={true}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                      innerRadius={65} outerRadius={100} dataKey="value"
-                    >
+                    <Pie data={chartZonPieDataMain} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value">
                       {chartZonPieDataMain.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={[colors.primary, colors.warning, colors.success, colors.purple, colors.danger][index % 5]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `RM ${Number(value).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
-                    <Legend />
+                    <Tooltip formatter={(value) => `RM ${Number(value).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                  <p className="text-lg font-bold text-gray-800 dark:text-gray-100">RM {mJumlahRM.toLocaleString('en-MY', {maximumFractionDigits: 0})}</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <p className="text-base font-bold text-gray-800 dark:text-gray-100">RM {mJumlahRM.toLocaleString('en-MY', { maximumFractionDigits: 0 })}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">Jumlah</p>
                 </div>
+              </div>
+              <div className="space-y-2 mt-3 max-h-[120px] overflow-y-auto">
+                {chartZonPieDataMain.map((entry, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-gray-600 dark:text-gray-300 truncate">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: [colors.primary, colors.warning, colors.success, colors.purple, colors.danger][i % 5] }}></span>
+                      <span className="truncate">{entry.name}</span>
+                    </span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-100 shrink-0">{mJumlahRM > 0 ? ((entry.value / mJumlahRM) * 100).toFixed(0) : 0}%</span>
+                  </div>
+                ))}
+                {chartZonPieDataMain.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Tiada data</p>}
+              </div>
+            </ChartCard>
+
+            <ChartCard title="Ranking Penyenggara (% Siap DV3)">
+              <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
+                {chart4Data.map((row, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="text-sm font-medium truncate flex-1 text-gray-700 dark:text-gray-200">{row.name}</span>
+                    <ProgressBar peratus={row.peratus} decimals={0} />
+                  </div>
+                ))}
+                {chart4Data.length === 0 && <p className="text-sm text-gray-400 text-center py-6">Tiada data</p>}
               </div>
             </ChartCard>
           </div>
 
-          <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Jadual Prestasi Penyenggara (PPM) Keseluruhan</h3>
+          {/* Pintasan */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Pintasan</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <button onClick={() => setActiveTab && setActiveTab('dv3')} className="flex items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow text-left">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${accents.blue.bg}`}><Icon name="Activity" size={18} className={accents.blue.text} /></div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate text-gray-800 dark:text-gray-100">Tambah Rekod DV3</p>
+                  <p className="text-xs text-gray-400 truncate">Daftar pemeriksaan baru</p>
+                </div>
+              </button>
+              <button onClick={() => setActiveTab && setActiveTab('ppm')} className="flex items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow text-left">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${accents.green.bg}`}><Icon name="CheckSquare" size={18} className={accents.green.text} /></div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate text-gray-800 dark:text-gray-100">Tambah Tugasan PPM</p>
+                  <p className="text-xs text-gray-400 truncate">Buat tugasan baru</p>
+                </div>
+              </button>
+              <button onClick={() => setActiveTab && setActiveTab('kontraktor')} className="flex items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow text-left">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${accents.purple.bg}`}><Icon name="Wrench" size={18} className={accents.purple.text} /></div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate text-gray-800 dark:text-gray-100">Daftar Kontraktor</p>
+                  <p className="text-xs text-gray-400 truncate">Tambah kontraktor baru</p>
+                </div>
+              </button>
+              <button onClick={() => setActiveTab && setActiveTab('tetapan')} className="flex items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow text-left">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${accents.yellow.bg}`}><Icon name="Settings" size={18} className={accents.yellow.text} /></div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate text-gray-800 dark:text-gray-100">Laporan & Tetapan</p>
+                  <p className="text-xs text-gray-400 truncate">Lihat tetapan sistem</p>
+                </div>
+              </button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-300">
-                  <tr>
-                    <th className="px-4 py-3">Penyenggara</th>
-                    <th className="px-4 py-3 text-center">Jumlah PPM</th>
-                    <th className="px-4 py-3 text-center">Siap</th>
-                    <th className="px-4 py-3 text-center">Tak Siap</th>
-                    <th className="px-4 py-3">% Siap</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ppmTableData.map((row, i) => (
-                    <tr key={i} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className="px-4 py-2 font-medium">{row.Penyenggara}</td>
-                      <td className="px-4 py-2 text-center">{row.JumlahPPM}</td>
-                      <td className="px-4 py-2 text-center text-green-600 font-semibold">{row.Siap}</td>
-                      <td className="px-4 py-2 text-center text-red-600 font-semibold">{row.TakSiap}</td>
-                      <td className="px-4 py-2"><ProgressBar peratus={row.PeratusNum} decimals={2} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          </div>
+
+          <div className="text-center text-xs text-gray-400 pt-4 space-y-1 print:hidden">
+            <p>Smart • Efisien • Selamat</p>
+            <p>Ke arah pengurusan fasiliti yang lebih cemerlang</p>
           </div>
         </div>
       );
