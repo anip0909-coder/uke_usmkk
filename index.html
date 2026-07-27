@@ -18,16 +18,63 @@
   <!-- Recharts v2.1.12 (Versi stabil untuk pelayar UMD tanpa ralat BarChart) -->
   <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
 
+  <!-- Fon: Space Grotesk (teknikal/elektrik) untuk tajuk, Inter untuk teks, JetBrains Mono untuk data/angka -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = { darkMode: 'class' }
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            volt: { 50:'#ecfeff', 100:'#cffafe', 300:'#67e8f9', 400:'#22d3ee', 500:'#06b6d4', 600:'#0891b2', 700:'#0e7490' },
+            amp: { 400:'#fbbf24', 500:'#f59e0b', 600:'#d97706' },
+          },
+          boxShadow: {
+            glow: '0 0 0 1px rgba(34,211,238,0.15), 0 8px 24px -4px rgba(34,211,238,0.25)',
+          },
+        }
+      }
+    }
   </script>
 
   <!-- Babel Compiler (Gunakan versi yang stabil) -->
   <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
 
   <style>
+    body { font-family: 'Inter', sans-serif; }
+    .font-display { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.01em; }
+    .font-mono-data { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+    .dark ::-webkit-scrollbar-thumb { background: #1e3a4a; border-radius: 8px; }
+
+    /* Aksen "arus elektrik" - garis atas kad berdenyut lembut */
+    .circuit-accent { position: relative; overflow: hidden; }
+    .circuit-accent::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #06b6d4, #22d3ee, #fbbf24, #22d3ee, #06b6d4);
+      background-size: 200% 100%;
+      animation: circuit-flow 3.5s linear infinite;
+      opacity: 0.85;
+    }
+    @keyframes circuit-flow { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .circuit-accent::before { animation: none; } }
+
+    .glow-ring { box-shadow: 0 0 0 1px rgba(34,211,238,0.18), 0 8px 24px -6px rgba(34,211,238,0.3); }
+    .status-dot { box-shadow: 0 0 8px 2px currentColor; }
+
     /* Tambahan CSS untuk mencantikkan hasil cetakan PDF */
     @media print {
       body {
@@ -38,10 +85,11 @@
       .recharts-wrapper {
         page-break-inside: avoid !important;
       }
+      .circuit-accent::before { animation: none; }
     }
   </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
+<body class="bg-slate-100 dark:bg-slate-950 transition-colors duration-200">
   <div id="root"></div>
 
   <!-- Logik Aplikasi React (PENTING: Jangan gunakan data-presets="react,env" yang boleh menyebabkan ralat import) -->
@@ -262,9 +310,16 @@
 
       if (loading) {
         return (
-          <div className={`min-h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-            <span className="text-lg">Memuatkan Data dari Google Sheets...</span>
+          <div className={`min-h-screen flex flex-col items-center justify-center font-sans ${darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+            <div className="relative w-14 h-14 mb-5">
+              <div className="absolute inset-0 rounded-full border-4 border-volt-400/20"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-t-volt-400 border-r-volt-400 animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center text-volt-400">
+                <Icon name="Activity" size={20} />
+              </div>
+            </div>
+            <span className="text-base font-display font-semibold tracking-wide">Memuatkan Data dari Google Sheets...</span>
+            <span className="text-xs text-slate-400 mt-1 font-mono-data">MENYAMBUNG KE PANGKALAN DATA</span>
           </div>
         );
       }
@@ -281,16 +336,16 @@
       };
 
       return (
-        <div className={`min-h-screen font-sans flex ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-800'}`}>
+        <div className={`min-h-screen font-sans flex ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-800'}`}>
           {/* SIDEBAR (desktop) */}
-          <aside className={`hidden md:flex md:flex-col w-64 shrink-0 min-h-screen sticky top-0 self-start print:hidden border-r ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-            <div className="flex items-center gap-3 px-5 py-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shrink-0">
-                <Icon name="LayoutDashboard" size={22} />
+          <aside className={`hidden md:flex md:flex-col w-64 shrink-0 min-h-screen sticky top-0 self-start print:hidden border-r ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="flex items-center gap-3 px-5 py-6 border-b border-slate-200 dark:border-slate-800">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-volt-500 to-volt-700 flex items-center justify-center text-white shrink-0 shadow-lg shadow-volt-500/30 ring-1 ring-white/10">
+                <Icon name="Activity" size={22} />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold leading-tight truncate">{settings.systemName}</p>
-                <p className="text-xs text-gray-400">Jabatan Pengurusan Fasiliti USM</p>
+                <p className="text-sm font-display font-bold leading-tight truncate">{settings.systemName}</p>
+                <p className="text-[11px] text-volt-600 dark:text-volt-400 font-semibold uppercase tracking-wider">Jabatan Pengurusan Fasiliti USM</p>
               </div>
             </div>
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -298,10 +353,10 @@
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                     activeTab === item.id
-                      ? 'bg-blue-600 text-white shadow'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      ? 'bg-gradient-to-r from-volt-600 to-volt-500 text-white shadow-lg shadow-volt-500/30'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <Icon name={item.icon} size={18} />
@@ -309,41 +364,42 @@
                 </button>
               ))}
             </nav>
-            <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-400">
+            <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-400 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 status-dot text-emerald-400"></span>
               © {new Date().getFullYear()} Unit Kejuruteraan Elektrik
             </div>
           </aside>
 
           {/* MAIN COLUMN */}
           <div className="flex-1 min-w-0">
-            <div className={`sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3.5 shadow-sm print:hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3.5 shadow-sm backdrop-blur print:hidden border-b ${darkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200'}`}>
               <div className="flex items-center gap-3 min-w-0">
-                <button className="md:hidden p-2 -ml-2" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                <button className="md:hidden p-2 -ml-2 text-slate-500" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                   <Icon name="Menu" size={22} />
                 </button>
                 <div className="min-w-0">
-                  <h1 className="text-base sm:text-xl font-bold truncate">Selamat Datang Kembali 👋</h1>
-                  <p className="text-xs text-gray-400 hidden sm:block truncate">Ringkasan prestasi dan aktiviti terkini unit kejuruteraan elektrik.</p>
+                  <h1 className="text-base sm:text-xl font-display font-bold truncate bg-gradient-to-r from-volt-600 to-volt-400 dark:from-volt-300 dark:to-volt-500 bg-clip-text text-transparent">Selamat Datang Kembali ⚡</h1>
+                  <p className="text-xs text-slate-400 hidden sm:block truncate">Ringkasan prestasi dan aktiviti terkini unit kejuruteraan elektrik.</p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-1 sm:space-x-2 print:hidden shrink-0">
-                <button onClick={() => window.print()} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-slate-600 dark:text-slate-400" title="Cetak / Simpan PDF">
+                <button onClick={() => window.print()} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400" title="Cetak / Simpan PDF">
                   <Icon name="Printer" size={20} />
                 </button>
 
-                <button onClick={fetchData} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400" title="Segarkan Data Terkini">
+                <button onClick={fetchData} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-volt-600 dark:text-volt-400" title="Segarkan Data Terkini">
                   <Icon name="RefreshCw" size={20} />
                 </button>
 
-                <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Tukar Mod Paparan">
+                <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-amp-500 dark:text-amp-400" title="Tukar Mod Paparan">
                   <Icon name={darkMode ? 'Sun' : 'Moon'} size={20} />
                 </button>
               </div>
             </div>
 
             {isMobileMenuOpen && (
-              <div className={`md:hidden fixed top-16 left-0 right-0 z-40 shadow-lg border-t print:hidden ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <div className={`md:hidden fixed top-16 left-0 right-0 z-40 shadow-lg border-t print:hidden ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                 <div className="flex flex-col p-2">
                   {navItems.map(item => (
                     <button
@@ -351,8 +407,8 @@
                       onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
                       className={`flex items-center px-4 py-3 rounded-md text-base font-medium mb-1 ${
                         activeTab === item.id 
-                          ? (darkMode ? 'bg-gray-700 text-blue-400' : 'bg-blue-100 text-blue-700')
-                          : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                          ? (darkMode ? 'bg-slate-800 text-volt-400' : 'bg-volt-50 text-volt-700')
+                          : 'hover:bg-slate-200 dark:hover:bg-slate-800'
                       }`}
                     >
                       <Icon name={item.icon} size={20} className="mr-3" />
@@ -365,10 +421,10 @@
 
             <div className="p-4 sm:p-6 lg:p-8 print:pt-4">
               {error && (
-                <div className="bg-amber-100 border border-amber-400 text-amber-800 px-6 py-5 rounded-lg flex items-start shadow-sm mb-6 print:hidden">
+                <div className="bg-amp-400/10 border border-amp-500/40 text-amp-700 dark:text-amp-300 px-6 py-5 rounded-xl flex items-start shadow-sm mb-6 print:hidden">
                   <Icon name="AlertCircle" className="mr-3 mt-1 flex-shrink-0" />
                   <div className="flex-1">
-                    <h3 className="font-bold text-lg mb-1">Amaran Sambungan Rangkaian</h3>
+                    <h3 className="font-display font-bold text-lg mb-1">Amaran Sambungan Rangkaian</h3>
                     <p>{error}</p>
                   </div>
                 </div>
@@ -381,14 +437,14 @@
     }
 
     const StatCard = ({ title, value, subtext, icon, accent }) => (
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-start gap-3">
-        <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${accent.bg}`}>
+      <div className="circuit-accent bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-start gap-3 hover:-translate-y-0.5 hover:shadow-glow transition-all duration-200">
+        <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ring-1 ring-black/5 dark:ring-white/10 ${accent.bg}`}>
           <Icon name={icon} size={20} className={accent.text} />
         </div>
         <div className="min-w-0">
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{title}</p>
-          <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 truncate">{value}</p>
-          {subtext && <p className="text-xs text-gray-400 mt-0.5 truncate">{subtext}</p>}
+          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{title}</p>
+          <p className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 truncate font-mono-data">{value}</p>
+          {subtext && <p className="text-xs text-slate-400 mt-0.5 truncate">{subtext}</p>}
         </div>
       </div>
     );
@@ -404,31 +460,31 @@
     };
 
     const MetricCard = ({ title, value, color, subtext, icon }) => (
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col gap-2 text-center items-center">
+      <div className="circuit-accent bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-2 text-center items-center hover:-translate-y-0.5 hover:shadow-glow transition-all duration-200">
         {icon && (
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-1 ${iconBgMap[color] || 'bg-blue-100 dark:bg-blue-500/20'}`}>
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-1 ring-1 ring-black/5 dark:ring-white/10 ${iconBgMap[color] || 'bg-blue-100 dark:bg-blue-500/20'}`}>
             <Icon name={icon} size={18} className={color || 'text-blue-500'} />
           </div>
         )}
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{title}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{title}</p>
         <div className="flex items-baseline space-x-2">
-          <p className={`text-2xl font-bold ${color}`}>{value}</p>
-          {subtext && <p className="text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{subtext}</p>}
+          <p className={`text-2xl font-display font-bold font-mono-data ${color}`}>{value}</p>
+          {subtext && <p className="text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{subtext}</p>}
         </div>
       </div>
     );
 
     const ChartCard = ({ title, children, className = '' }) => (
-      <div className={`bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 ${className}`}>
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">{title}</h3>
+      <div className={`circuit-accent bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 ${className}`}>
+        <h3 className="text-lg font-display font-semibold text-slate-700 dark:text-slate-200 mb-4">{title}</h3>
         <div className="w-full">{children}</div>
       </div>
     );
 
     const FilterSelect = ({ label, value, options, onChange }) => (
       <div className="flex flex-col min-w-[150px]">
-        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-        <select value={value} onChange={(e) => onChange(e.target.value)} className="border rounded px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:border-blue-500">
+        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{label}</label>
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="border rounded-lg px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:border-volt-500 focus:ring-2 focus:ring-volt-500/30 transition-shadow">
           {options.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
         </select>
       </div>
@@ -437,16 +493,16 @@
     const ProgressBar = ({ peratus, decimals = 2 }) => {
       const peratusNum = Number(peratus) || 0;
       const formatted = peratusNum.toFixed(decimals);
-      let colorClass = 'bg-blue-500';
-      if (peratusNum >= 80) colorClass = 'bg-green-500';
-      else if (peratusNum < 50) colorClass = 'bg-red-500';
-      else if (peratusNum < 80) colorClass = 'bg-yellow-500';
+      let colorClass = 'bg-volt-500';
+      if (peratusNum >= 80) colorClass = 'bg-emerald-500';
+      else if (peratusNum < 50) colorClass = 'bg-rose-500';
+      else if (peratusNum < 80) colorClass = 'bg-amp-400';
 
       return (
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium min-w-[3.5rem] text-right">{formatted}%</span>
-          <div className="w-full max-w-[100px] bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden border border-gray-300 dark:border-gray-600">
-            <div className={`${colorClass} h-2.5 rounded-full`} style={{ width: `${Math.min(peratusNum, 100)}%` }}></div>
+          <span className="text-sm font-mono-data font-semibold min-w-[3.5rem] text-right">{formatted}%</span>
+          <div className="w-full max-w-[100px] bg-slate-200 rounded-full h-2.5 dark:bg-slate-700 overflow-hidden border border-slate-300 dark:border-slate-600">
+            <div className={`${colorClass} h-2.5 rounded-full transition-all duration-500`} style={{ width: `${Math.min(peratusNum, 100)}%` }}></div>
           </div>
         </div>
       );
@@ -479,18 +535,18 @@
       };
 
       return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden mt-6">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{title} ({data.length} Rekod)</h3>
+        <div className="circuit-accent bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden mt-6">
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
+            <h3 className="text-lg font-display font-semibold text-slate-800 dark:text-slate-200">{title} <span className="font-mono-data text-volt-600 dark:text-volt-400">({data.length} Rekod)</span></h3>
             {onAddClick && (
-              <button onClick={onAddClick} className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+              <button onClick={onAddClick} className="flex items-center space-x-2 bg-gradient-to-r from-volt-600 to-volt-500 hover:from-volt-700 hover:to-volt-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow shadow-volt-500/30 transition-all">
                 <Icon name="PlusCircle" size={16} /><span>Tambah Rekod</span>
               </button>
             )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-300">
+              <thead className="text-xs text-slate-700 uppercase bg-slate-100 dark:bg-slate-800 dark:text-slate-300">
                 <tr>
                   {columns.map(c => <th key={c.key} className="px-4 py-3">{c.label}</th>)}
                   <th className="px-4 py-3 text-center">Tindakan</th>
