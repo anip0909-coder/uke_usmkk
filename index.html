@@ -131,7 +131,7 @@
     // =========================================================================
     // SANGAT PENTING: TUKAR URL INI KEPADA URL WEB APP APPS SCRIPT ANDA
     // =========================================================================
-    const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbzVy4QZxURy_gBAmePw4WId3ZmlMKtzjX8wYGKwTitGYjtNyYVFHZf2x-g6nzOHuVFN/exec";
+    const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbytiLV-DMFyvOVEjAXC0lnoMiuIy79-OkOlOCk_sEWuiO-mDWPZgd8EzAAxL54sPL4b/exec";
 
     const SenaraiBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
 
@@ -1023,10 +1023,11 @@
       const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
       
       const handleAddSave = () => {
+         // Padanan berdasarkan Tahun & Bulan sahaja — rekod sedia ada pada bulan
+         // yang sama akan dikemaskini (tambah), bukan cipta baris baharu.
          const existingRecord = data.find(d => 
            String(d.Tahun) === String(addForm.Tahun) && 
-           String(d.Bulan).trim().toLowerCase() === String(addForm.Bulan).trim().toLowerCase() && 
-           String(d.Penyenggara).trim().toLowerCase() === String(addForm.Penyenggara).trim().toLowerCase()
+           String(d.Bulan).trim().toLowerCase() === String(addForm.Bulan).trim().toLowerCase()
          );
 
          if (existingRecord) {
@@ -1313,10 +1314,11 @@
       const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
       
       const handleAddSave = () => {
+         // Padanan berdasarkan Tahun & Bulan sahaja — rekod sedia ada pada bulan
+         // yang sama akan dikemaskini (tambah), bukan cipta baris baharu.
          const existingRecord = data.find(d => 
            String(d.Tahun) === String(addForm.Tahun) && 
-           String(d.Bulan).trim().toLowerCase() === String(addForm.Bulan).trim().toLowerCase() && 
-           String(d.Penyenggara).trim().toLowerCase() === String(addForm.Penyenggara).trim().toLowerCase()
+           String(d.Bulan).trim().toLowerCase() === String(addForm.Bulan).trim().toLowerCase()
          );
 
          if (existingRecord) {
@@ -1637,11 +1639,11 @@
       const handleDelete = (rowNumber) => deleter(GID, rowNumber, setter, data);
       
       const handleAddSave = () => {
+         // Padanan berdasarkan Tahun & Bulan sahaja — rekod sedia ada pada bulan
+         // yang sama akan dikemaskini (tambah), bukan cipta baris baharu.
          const existingRecord = data.find(d => 
            String(d.Tahun) === String(addForm.Tahun) && 
-           String(d.Bulan).trim().toLowerCase() === String(addForm.Bulan).trim().toLowerCase() && 
-           String(d.Kontraktor).trim().toLowerCase() === String(addForm.Kontraktor).trim().toLowerCase() &&
-           String(d.Zon).trim().toLowerCase() === String(addForm.Zon).trim().toLowerCase()
+           String(d.Bulan).trim().toLowerCase() === String(addForm.Bulan).trim().toLowerCase()
          );
 
          if (existingRecord) {
