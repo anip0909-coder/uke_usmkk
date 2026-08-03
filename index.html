@@ -249,6 +249,7 @@
         try {
           const response = await fetch(APPSCRIPT_URL, {
             method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: 'update', gid: gid, rowNumber: rowNumber, data: newData })
           });
           const textRes = await response.text();
@@ -268,6 +269,7 @@
           try {
             const response = await fetch(APPSCRIPT_URL, {
               method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
               body: JSON.stringify({ action: 'delete', gid: gid, rowNumber: rowNumber })
             });
             const textRes = await response.text();
@@ -287,20 +289,27 @@
         try {
           const response = await fetch(APPSCRIPT_URL, {
             method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: 'add', gid: gid, data: newData })
           });
+          if (!response.ok) throw new Error(`Ralat HTTP: ${response.status}`);
           const textRes = await response.text();
-          const result = JSON.parse(textRes);
+          let result;
+          try {
+            result = JSON.parse(textRes);
+          } catch (parseErr) {
+            throw new Error("Respon pelayan bukan JSON (semak sama ada Apps Script dideploy sebagai 'Anyone' & versi terkini).");
+          }
           
           if (result && result.success) {
             alert("Rekod baharu berjaya disimpan ke Google Sheet!");
             await fetchData(); 
           } else {
-            throw new Error("Respon tidak berjaya");
+            throw new Error(result && result.error ? result.error : "Respon tidak berjaya");
           }
         } catch (e) {
           console.error("Ralat sync (add):", e);
-          alert("Gagal menambah data ke Google Sheet. Data disimpan sementara.");
+          alert(`Gagal menambah data ke Google Sheet: ${e.message}\n\nData disimpan sementara (luar talian).`);
           const tempRowNumber = Date.now(); 
           const newRecord = { ...newData, id: `temp-${tempRowNumber}`, _rowNumber: tempRowNumber };
           setter([...localData, newRecord]);
